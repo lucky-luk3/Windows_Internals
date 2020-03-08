@@ -48,3 +48,15 @@ Win32k.sys es el encargado de la gestión de la GUI de windows. Las funciones co
 Los Enviroment Subsystem pueden ser win32, unix... en el caso de win 32, la dll del sistema es csrss.exe.  
 Los servicios son procesos que arrancan cuando se carga el subsistema y corren bajo local system, network service  local service.  
 Dentro de procesos del sistema está por ejemplo csrss.exe, SCM (service control manager), smss.exe, si estos procesos se corrompen producen un error fatal en el sistema.
+
+## Procesos importantes
+### Proceso inactivo (idle process)
+Siempre tiene el PID 0.  
+Es el proceso que ocupa los hilos del procesador cuando no hay tareas que pueda ocupar.  
+No es un proceso real ya que no tiene un ejecutable asociado, espacio asignado.  
+
+### Proceso del sistema (system process)
+Siempre tiene el PID 4.  
+Representa el espacio y los recursos del kernel.  
+Los hilos del proceso son creaos por el propio kernel o por los drivers que tiene asociados. Nunca corre ningun hilo en el espacio de usuario.  
+Los drivers crean hilos con la función PsCreateSystemThread.
