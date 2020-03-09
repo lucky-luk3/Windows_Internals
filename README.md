@@ -60,3 +60,32 @@ Siempre tiene el PID 4.
 Representa el espacio y los recursos del kernel.  
 Los hilos del proceso son creaos por el propio kernel o por los drivers que tiene asociados. Nunca corre ningun hilo en el espacio de usuario.  
 Los drivers crean hilos con la función PsCreateSystemThread.
+
+### Administrador de sesiones (Session manager smss.exe)
+Es el primer proceso  que crea system.  
+Es el encargado de crear las variables del sistema, lanza los procesos de los subsistemas (csrss.exe), lanzar copias de si mismo en las sesiones nuevas, ese proceso de si mismo creado, lanza winlogon y csrss en esa sesión y muere.  
+Monitoriza los procesos de subsistemas y si alguno muere, genera un pantallazo azul.  
+
+### Winlogon
+Maneja los accesos y salidas de sesión de los usuarios.  
+Si el proceso muere, el usuario pierde la sesión en la que está logado y todos los procesos de esa sesión mueren.    
+Es el encargado de capturar la Secure Attention Sequence (SAS) Ctrl+Alt+Del.  
+Es quien lanza el proceso LogonUI.exe para mostrar la ventana de login, puede ser reemplazada esa ventana.  
+Envia la información capturada a LSASS, si la respuesta es satisfactoria, incial la sesión del ususario.
+
+### Local session Authenticatio SubSystem LSASS
+Es el encargado de llamar al paquete de autenticación adecuado.  
+Cuando recibe unas credenciales válidas, genera un token que representa el perfil de seguridad del usuario y se lo envia a winlogon de respuesta.  
+
+### Service Control Manager (SCM services.exe)
+Es el respnsable de iniciar, parar e interactuar con los servicios.  
+Puede iniciar servicios cuando arranca el sistema sin necesidad de una sesió interactiva abierta.  
+Puede correr bajo usuarios especiales:
+* LocalSystem
+* NetworkService
+* LocalService  
+Tambien se pe
+
+### Local Session manager (lsm.dll)
+Importada en svchost.exe.  
+gestiona las sesiones de terminal.
