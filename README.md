@@ -1,19 +1,38 @@
 # Windows_Internals
 Windows es un sistema orientado a objetos, todo en el sistema operativo es un objeto.  
-Los objetos están en el espacio de memoria y solamente son accesibles mediante el kernel. Es el kernel el que puede 
+Los objetos están en el espacio de memoria y solamente son accesibles mediante el kernel.  
+
 ## Procesos
 El proceso es un objeto de administración que provee la información necesaria para ejecutar un programa.  
 Un proceso no corre ni ejecuta código, eso lo hacen los hilos.  
 El proceso no conoce ni necesita las direcciones físicas de la memoria, únicamente conoce las direcciones virtuales y es el gestor de memoria del sistema operativo el que hace esa traducción.  
 Un proceso contiene:  
 * Un espacio de memoria privado.
+* Una cantidad de memoria física asociada 8working set)
 * El fichero ejecutable, un enlace al fichero en disco que contiene la función main.
 * Una tabla del indicador de los manejadores de objetos del kernel asociados a él.  
-
+* Un token de seguridad que contiene los descriptores de seguridad del proceso.    
+* Prioridad, esa prioridad será la asignada a los hilos del proceso.  
+Un proceso termina cuando:
+* Todos sus hilos terminan.
+* Uno de los hilos llama a ExitProcess(Win32), esto ocurre avaces como rutina de cierre del hilo principal, de tal manera que cerrando ese hilo se cierra todo el proceso. Esta es la manera correcta de terminar un proceso ya que da tiempo al proceso y a las dlls a termianr por si mismas e incluso escribir en logs, liberar memoria o guardar infromación del fichero.  
+* uno de los hilos llama a TerminateProcess(Win32), es la manera no recomendada de termianr un proceso. Esta llamada puede hacerse desde el exterior de los hilos del proceso. 
+Algunas páginas de la memoria física pueden ser compartidas, por ejemplo cuando se ejecutan dos instancias de un mismo programa, la página en la memoria física que almacena el ejecutable o dlls compartidas, puede ser compartida.  
+La columna del Administrador de Tareas nos muestra la memoria ocupada por un proceso, pero únicamente aquella que el proceso tiene marcada como memoria privada. Para ver la memoria completa que ocupa un proceso, necesitaremos activar la columna Tamaño de asignación. 
+### Creación de un proceso
+* Apertura del ejecutable
+* Creación de un objeto en el kernel para administrar esa imagen. Por ejemplo KPROCESS. (Executive process).
+* Creación del hilo principal.
+* Creación de un objeto en el kernel para administrar hilos. por ejemeplo KTHREAD o ETHREAD (Executive Thread).
+* El kernel notifica a CSRSS que un nuevo proceso y un nuevo hilo ha sido creado por LPC.
+* CSRSS crea sus manajadores y estructuras para poder administarr los procesos y los hilos.  
+* Se continua con la creación del proceso y la ejecución de los hilos. 
+   * Se cargan las DLLs necesarias y se inicializan.
+   * Se llama a la función DllMain a través de DLL_PROCESS_ATTACH 
+* Se ejecuta la función main del punto de entrada del binario (main/WinMain)2
 El sistema operativo puede asignar más memoria a los procesos de la RAM que tiene, usando el fichero de paginación.  
 Es el gestor de la memoria el que va asignando memoria física a la memoria virtual cuando necesita ejecutar información de esas páginas.  
-Algunas páginas de la memoria física pueden ser compartidas, por ejemplo cuando se ejecutan dos instancias de un mismo programa, la página en la memoria física que almacena el ejecutable o dlls compartidas, puede ser compartida.  
-La columna del Administrador de Tareas nos muestra la memoria ocupada por un proceso, pero únicamente aquella que el proceso tiene marcada como memoria privada. Para ver la memoria completa que ocupa un proceso, necesitaremos activar la columna Tamaño de asignación.  
+ 
 
 
 ## Hilos
@@ -89,3 +108,12 @@ Tambien se pe
 ### Local Session manager (lsm.dll)
 Importada en svchost.exe.  
 gestiona las sesiones de terminal.
+
+## Wow64 (Windows on Windows 64)
+Windows permite la ejecución de binarios de 32bits en una arquiectura de 64.  
+Para ello, tiene un libreria de 32 bits de NtDll y otras dlls de conversión.
+![Imagen de arquitectura Wow64](./images/win32-64.PNG?raw=true "Ficheros")
+Existen algunas limitaciones.  
+Los procesos de 64 bits no pueden cargar una dll de 32 y viceversa.  
+Algunas APIs no son soportadas por wow64.  
+
