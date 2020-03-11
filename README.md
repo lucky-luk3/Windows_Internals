@@ -31,9 +31,64 @@ La columna del Administrador de Tareas nos muestra la memoria ocupada por un pro
    * Se llama a la función DllMain a través de DLL_PROCESS_ATTACH 
 * Se ejecuta la función main del punto de entrada del binario (main/WinMain)2
 El sistema operativo puede asignar más memoria a los procesos de la RAM que tiene, usando el fichero de paginación.  
-Es el gestor de la memoria el que va asignando memoria física a la memoria virtual cuando necesita ejecutar información de esas páginas.  
- 
+Es el gestor de la memoria el que va asignando memoria física a la memoria virtual cuando necesita ejecutar información de esas páginas. 
 
+#### C++
+```c++
+BOOL CreateProcessA(
+  LPCSTR                lpApplicationName,
+  LPSTR                 lpCommandLine,
+  LPSECURITY_ATTRIBUTES lpProcessAttributes,
+  LPSECURITY_ATTRIBUTES lpThreadAttributes,
+  BOOL                  bInheritHandles,
+  DWORD                 dwCreationFlags,
+  LPVOID                lpEnvironment,
+  LPCSTR                lpCurrentDirectory,
+  LPSTARTUPINFOA        lpStartupInfo,
+  LPPROCESS_INFORMATION lpProcessInformation
+);
+```
+* lpApplicationName: nombre del binario en system32, cuidado por los binarios necesarios en wow64.
+* lpCommandLine: nombre del proceso a lanzar, deja que el sistema interprete que binario ejecutar.
+* lpProcessAttributes: atributos de seguridad del proceso.
+* lpThreadAttributes: atributos de seguridad de los hilos.
+* bInheritHandles: decidir si el proceso hijo debe heredar la tabla de manejadores del padre.
+* dwCreationFlags: parametros en la creación del proceso, por ejemplo CreateSuspended para process hollowing. 
+    * https://docs.microsoft.com/en-gb/windows/win32/procthread/process-creation-flags
+* lpEnvironment: pasarle variables de entorno al proceso en la creación. Con nullptr hereda las del creador.
+* lpCurrentDirectory: crea la variable CurrentDirectory util por ejemplo para llamar a librerias teniendo enc uenta esa ruta. Con nullptr hereda.
+* lpStartupInfo: estructura STARTUPINFO ¿?
+* lpProcessInformation: estructura PROCESS_INFORMATION que indica la información que entregará la función de vuelta.
+    * dwprocessId: indicador único para el proceso creado.
+    * dwTreaId: indicador único para el hilo creado.
+    * hProcess: manejador para poder interactuar con el proceso creado.
+    * hThreat: manejador para poder interactuar con el hilo creado.
+    
+```c++
+#include <windows.h>
+using namespace std;
+
+int main(int argc, TCHAR arg[])
+{
+    PROCESS_INFORMATION pi;
+    STARTUPINFO si = { sizeof(si) };
+    TCHAR name[] = TEXT("notepad");
+    BOOLEAN success = CreateProcess(nullptr, name, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi);
+
+    if(success){
+        cout << "PID: " << pi.dwProcessId << endl;
+        cout << "HProcess: " << pi.hProcess << endl;
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        DWORD code;
+        GetExitCodeProcess(pi.hProcess, &code);
+        cout << "Notepad has exited. Exit code=" << code << endl;       
+    }
+    else {
+        cout << GetLastError() << endl;
+    }
+    return 0;
+}
+```
 
 ## Hilos
 Los hilos son los encargados de ejecutar el código.  
