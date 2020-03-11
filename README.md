@@ -65,6 +65,7 @@ BOOL CreateProcessA(
     * hThreat: manejador para poder interactuar con el hilo creado.
     
 ```c++
+#include <iostream>
 #include <windows.h>
 using namespace std;
 
@@ -102,7 +103,54 @@ Un hilo contiene:
 * Prioridad. Número de 0-31. Prioridad de ejecución cuando sea programado. 31 es la mayor prioridad.
 * Estado: Running, ready, waiting.  
 
-En la parte del stack del hilo, podemos ver las llamadas desde el user mode al kernel mode.
+En la parte del stack del hilo, podemos ver las llamadas desde el user mode al kernel mode.  
+un hilo termina cuando:
+* El hilo devuelve un valor con return.
+* Función ExitThread(Win32) forma correcta de hacerlo, se sale de las librerias que tenga implementadas...
+* TerminateThread es la forma de forzar la finalización del hilo, sin que escriba en logs o termine las librerias inicializadas.  
+### Creación de hilos
+Se utilizará la función CreateThread(Win32).  
+```c++
+HANDLE CreateThread(
+  LPSECURITY_ATTRIBUTES   lpThreadAttributes,
+  SIZE_T                  dwStackSize,
+  LPTHREAD_START_ROUTINE  lpStartAddress,
+  __drv_aliasesMem LPVOID lpParameter,
+  DWORD                   dwCreationFlags,
+  LPDWORD                 lpThreadId
+);
+```
+* lpThreadAttributes: estructura de seguridad con el descriptor de seguridad del hilo, si es null no hereda del proceso.
+* dwStackSize: tamaño de la pila del hilo, si se marca a 0 cogerá el tamaño por defecto.
+* lpStartAddress: puntero a la función que tiene que ejecutar el hilo.
+* lpParameter: puntero a los parametros que se le pasan a la función.
+* dwCreationFlags: flags de creación:
+    * 0 : se ejecuta inmediatamente.
+    * CREATE_SUSPENDED: cerar el hilo en estado supendido.
+* lpThreadId: puntero a la variable que almacenará el identificador del thread una vez creado.
+```c++
+for(int i = 0; i < NUM_THREADS; i++) {
+		data[i].first = first + i * delta;
+		data[i].last = i == NUM_THREADS - 1 ? last : first + (i + 1) * delta - 1;
+		hThread[i] = CreateThread(nullptr, 0, CalcPrimes, &data[i], 0, &id);
+	}
+  ```
+### Prioridades de Hilos
+La prioridad de los hilos es un valor que va desde el 1 al 31, siendo el 31 el más elevado.  
+La prioridad 0 está erservada para la página 0 del hilo.  
+La prioridad base es la prioridad asignada al proceso y es la asignada por defecto a los hilos del proceso. Por defecto 8.  
+La prioridad se puede cambiar con:
+* SetPriorityClass: cambia la prioridad base del proceso. Win32.  
+* SetThreadPriority: cambia el puntero a la prioridad. Win32.  
+* KeSetPriorityThread: cambia el valor de la prioridad a un valor absoluto. Kernel.  
+
+En un proceso con Normal Priority Class, con la funcion SetthreadPriority puedes asignar +2, +1, -1, -2. Se puden saturar los valores asignando 1 o 15. Estos son las llamadas prioridades normales. 
+En un proceso con Above Normal Priority class la prioridad base es 10 y se pueden realizar los msimo cambios que con el anterior.  
+En un proceso con High Priority class la prioridad base es 13 y se pueden realizar los msimo cambios que con el anterior.  
+En un proceso con idle Priority class la prioridad base es 4 y se pueden realizar los msimo cambios que con el anterior.  
+En un proceso con Realtime Priority class la prioridad base es 24 y se pueden realizar los msimo cambios que con el anterior pero la saturación será a los valores 16 y 31.  
+Los hilos que están trabajando en primer plano, windows los aumenta cada poco tiempo con +2.  
+![Imagen de thread priorities](./images/thread-priorities.png?raw=true "priorities")
 
 ## Manejadores (handles)
 Es el kernel el único que puede obtener un puntero a un objeto y manipularlo. Desde la sesión de un usuario, para poder acceder a un objeto, es necesario un manejador que hace las veces de intermediario. Cuando obtienes un manejador, la dirección de acceso a él es añadida a tu tabla de manejadores y cuando dejas de necesitarlo y llamas a la función de closehandle, lo único que ocurre es el borrado de esa entrada, tu no sabes si el manejador es borrado o no, si otro proceso tiene abierto un manejador contra el mismo objeto se mantendrá activo pero si el número de manejadores abiertos para un objeto se vuelve 0, el objeto se borra a si mismo.  
