@@ -4,6 +4,7 @@
 El proceso es un objeto de administración que provee la información necesaria para ejecutar un programa.  
 Un proceso no corre ni ejecuta código, eso lo hacen los hilos.  
 El proceso no conoce ni necesita las direcciones físicas de la memoria, únicamente conoce las direcciones virtuales y es el gestor de memoria del sistema operativo el que hace esa traducción.  
+
 Un proceso contiene:  
 * Un espacio de memoria privado.
 * Una cantidad de memoria física asociada (working set)
@@ -11,6 +12,7 @@ Un proceso contiene:
 * Una tabla del indicador de los manejadores de objetos del kernel asociados a él.  
 * Un token de seguridad que contiene los descriptores de seguridad del proceso.    
 * Prioridad, esa prioridad será la asignada a los hilos del proceso.  
+
 Un proceso termina cuando:
 * Todos sus hilos terminan.
 * Uno de los hilos llama a ExitProcess(Win32), esto ocurre a veces como rutina de cierre del hilo principal, de tal manera que cerrando ese hilo se cierra todo el proceso. Esta es la manera correcta de terminar un proceso ya que da tiempo al proceso y a las dlls a termianr por si mismas e incluso escribir en logs, liberar memoria o guardar información del fichero.  
