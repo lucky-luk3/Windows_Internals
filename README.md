@@ -1,6 +1,4 @@
 # Windows_Internals
-Windows es un sistema orientado a objetos, todo en el sistema operativo es un objeto.  
-Los objetos están en el espacio de memoria y solamente son accesibles mediante el kernel.  
 
 ## Procesos
 El proceso es un objeto de administración que provee la información necesaria para ejecutar un programa.  
@@ -8,7 +6,7 @@ Un proceso no corre ni ejecuta código, eso lo hacen los hilos.
 El proceso no conoce ni necesita las direcciones físicas de la memoria, únicamente conoce las direcciones virtuales y es el gestor de memoria del sistema operativo el que hace esa traducción.  
 Un proceso contiene:  
 * Un espacio de memoria privado.
-* Una cantidad de memoria física asociada 8working set)
+* Una cantidad de memoria física asociada (working set)
 * El fichero ejecutable, un enlace al fichero en disco que contiene la función main.
 * Una tabla del indicador de los manejadores de objetos del kernel asociados a él.  
 * Un token de seguridad que contiene los descriptores de seguridad del proceso.    
@@ -154,6 +152,8 @@ Los hilos que están trabajando en primer plano, windows los aumenta cada poco t
 
 Cuando el administrador de hilos tiene que elegir que hilo ocupará el procesador, únicamente tiene en cuenta el nivel de prioridad del proceso. En el caso de que varios hilos con la misma prioridad estén en estado de "ready", el primer hilo en llegar a la cola será ejecutado durante un periodo de tiempo, si después de ese periodo no ha terminado, pasará a la cola otra vez y entrará el siguiente hilo de la misma prioridad.  
 Si un hilo se está ejecutando y entra en la cola un hilo de Prioridad Tiempo Real, el hilo que se estaba ejecutando se para, se le manda a la cola y  se ejecuta el de alta prioridad.  
+Si el equipo es multi procesador el algoritmo cambia.  
+![Imagen de thread scheduling multi-cpu](./images/scheduling-mulicpu.png?raw=true "scheduling")
 #### Quantum
 Es la medida de tiempo que el procesador tiene en cuenta para cambiar de hilo aunque no haya terminado la ejecución.  
 El planificador tiene ticks cada 10 msec o 15 en el caso de los multiprocesadores. El tiempo de quantum en clientes de 2 ticks y en los servidores de 12 ticks.  
@@ -170,6 +170,32 @@ El hilo que generó la ventana que está en primer plano, recibe un aumento del 
 * esperando (5, waiting): cuando el hilo está esperando por algo, como una entrada por parte del usuario, pasa a este estado. Este hilo pasará a listo cuando ocurra lo que está esperando.
 * Transición (6, transition): cuando un hilo está durante mucho tiempo en espera, el kernel lo pasa a este estado para ahorrar espacio en memoria.
 ![Imagen de threads states](./images/threads-states.png?raw=true "states")
+### Sincronización de hilos
+El kernel genera un estado en los objetos llamados señalados (signaled) o no señalados (non-signaled) respecto al que, monitorizando los cambios de estado, podremos gestionar la sincronización.  
+Se puede monitorizar los cambios mediante als funciones:
+* Windows API
+    * WainForSingleObject
+    * WaitForMultipleObjects
+* Kernel
+    * KeWaitForSingleObject
+    * KeWaitForMultipleObjects
+
+Los tipos de objetos son: Procesos, hilos, eventos, mutex, semaforo, timer, fichero, ejecución I/O.  
+Dependiendo del objeto, será señalado dependiendo de alguna condición.  
+* **Process**  
+    * El proceso termina  
+* **Hilo**  
+    * El hilo termina  
+* **Mutex**  
+    * El mutex queda libre  
+* **Evento**  
+    * La bandera del evento es lanzada  
+* **Semaforo**  
+    * El contador del semaforo es mayor de cero  
+* **Fichero o puerto I/O**  
+    * La operación se completa
+* **Timer**  
+    * El intervalo expira
 
 ## Manejadores (handles)
 Es el kernel el único que puede obtener un puntero a un objeto y manipularlo. Desde la sesión de un usuario, para poder acceder a un objeto, es necesario un manejador que hace las veces de intermediario. Cuando obtienes un manejador, la dirección de acceso a él es añadida a tu tabla de manejadores y cuando dejas de necesitarlo y llamas a la función de closehandle, lo único que ocurre es el borrado de esa entrada, tu no sabes si el manejador es borrado o no, si otro proceso tiene abierto un manejador contra el mismo objeto se mantendrá activo pero si el número de manejadores abiertos para un objeto se vuelve 0, el objeto se borra a si mismo.  
