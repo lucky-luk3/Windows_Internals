@@ -15,17 +15,17 @@ Un proceso contiene:
 * Prioridad, esa prioridad será la asignada a los hilos del proceso.  
 Un proceso termina cuando:
 * Todos sus hilos terminan.
-* Uno de los hilos llama a ExitProcess(Win32), esto ocurre avaces como rutina de cierre del hilo principal, de tal manera que cerrando ese hilo se cierra todo el proceso. Esta es la manera correcta de terminar un proceso ya que da tiempo al proceso y a las dlls a termianr por si mismas e incluso escribir en logs, liberar memoria o guardar infromación del fichero.  
-* uno de los hilos llama a TerminateProcess(Win32), es la manera no recomendada de termianr un proceso. Esta llamada puede hacerse desde el exterior de los hilos del proceso. 
+* Uno de los hilos llama a ExitProcess(Win32), esto ocurre a veces como rutina de cierre del hilo principal, de tal manera que cerrando ese hilo se cierra todo el proceso. Esta es la manera correcta de terminar un proceso ya que da tiempo al proceso y a las dlls a termianr por si mismas e incluso escribir en logs, liberar memoria o guardar información del fichero.  
+* Uno de los hilos llama a TerminateProcess(Win32), es la manera no recomendada de terminar un proceso. Esta llamada puede hacerse desde el exterior de los hilos del proceso. 
 Algunas páginas de la memoria física pueden ser compartidas, por ejemplo cuando se ejecutan dos instancias de un mismo programa, la página en la memoria física que almacena el ejecutable o dlls compartidas, puede ser compartida.  
 La columna del Administrador de Tareas nos muestra la memoria ocupada por un proceso, pero únicamente aquella que el proceso tiene marcada como memoria privada. Para ver la memoria completa que ocupa un proceso, necesitaremos activar la columna Tamaño de asignación. 
 ### Creación de un proceso
 * Apertura del ejecutable
 * Creación de un objeto en el kernel para administrar esa imagen. Por ejemplo KPROCESS. (Executive process).
 * Creación del hilo principal.
-* Creación de un objeto en el kernel para administrar hilos. por ejemeplo KTHREAD o ETHREAD (Executive Thread).
+* Creación de un objeto en el kernel para administrar hilos. por ejemplo KTHREAD o ETHREAD (Executive Thread).
 * El kernel notifica a CSRSS que un nuevo proceso y un nuevo hilo ha sido creado por LPC.
-* CSRSS crea sus manajadores y estructuras para poder administarr los procesos y los hilos.  
+* CSRSS crea sus manejadores y estructuras para poder administrar los procesos y los hilos.  
 * Se continua con la creación del proceso y la ejecución de los hilos. 
    * Se cargan las DLLs necesarias y se inicializan.
    * Se llama a la función DllMain a través de DLL_PROCESS_ATTACH 
@@ -53,10 +53,10 @@ BOOL CreateProcessA(
 * lpProcessAttributes: atributos de seguridad del proceso.
 * lpThreadAttributes: atributos de seguridad de los hilos.
 * bInheritHandles: decidir si el proceso hijo debe heredar la tabla de manejadores del padre.
-* dwCreationFlags: parametros en la creación del proceso, por ejemplo CreateSuspended para process hollowing. 
+* dwCreationFlags: parámetros en la creación del proceso, por ejemplo CreateSuspended para process hollowing. 
     * https://docs.microsoft.com/en-gb/windows/win32/procthread/process-creation-flags
 * lpEnvironment: pasarle variables de entorno al proceso en la creación. Con nullptr hereda las del creador.
-* lpCurrentDirectory: crea la variable CurrentDirectory util por ejemplo para llamar a librerias teniendo enc uenta esa ruta. Con nullptr hereda.
+* lpCurrentDirectory: crea la variable CurrentDirectory util por ejemplo para llamar a librerías teniendo en cuenta esa ruta. Con nullptr hereda.
 * lpStartupInfo: estructura STARTUPINFO ¿?
 * lpProcessInformation: estructura PROCESS_INFORMATION que indica la información que entregará la función de vuelta.
     * dwprocessId: indicador único para el proceso creado.
@@ -98,16 +98,16 @@ Un hilo contiene:
 * Sesión o modo de acceso asignado (user mode o kernel mode)
 * Una pila con las variables, métodos... en el espacio del kernel y otra en el espacio del usuario. ¿?
 * Un área de almacenamiento privado, llamado Thread Local Storage (TLS).
-* Token de seguridad. (opcional)
-* Cola de mensajes y ventanas que el hilo ha creado. (opcional)
+* Token de seguridad. (Opcional)
+* Cola de mensajes y ventanas que el hilo ha creado. (Opcional)
 * Prioridad. Número de 0-31. Prioridad de ejecución cuando sea programado. 31 es la mayor prioridad.
 * Estado: Running, ready, waiting.  
 
 En la parte del stack del hilo, podemos ver las llamadas desde el user mode al kernel mode.  
-un hilo termina cuando:
+Un hilo termina cuando:
 * El hilo devuelve un valor con return.
-* Función ExitThread(Win32) forma correcta de hacerlo, se sale de las librerias que tenga implementadas...
-* TerminateThread es la forma de forzar la finalización del hilo, sin que escriba en logs o termine las librerias inicializadas.  
+* Función ExitThread(Win32) forma correcta de hacerlo, se sale de las librerías que tenga implementadas...
+* TerminateThread es la forma de forzar la finalización del hilo, sin que escriba en logs o termine las librerías inicializadas.  
 ### Creación de hilos
 Se utilizará la función CreateThread(Win32).  
 ```c++
@@ -123,10 +123,10 @@ HANDLE CreateThread(
 * lpThreadAttributes: estructura de seguridad con el descriptor de seguridad del hilo, si es null no hereda del proceso.
 * dwStackSize: tamaño de la pila del hilo, si se marca a 0 cogerá el tamaño por defecto.
 * lpStartAddress: puntero a la función que tiene que ejecutar el hilo.
-* lpParameter: puntero a los parametros que se le pasan a la función.
+* lpParameter: puntero a los parámetros que se le pasan a la función.
 * dwCreationFlags: flags de creación:
     * 0 : se ejecuta inmediatamente.
-    * CREATE_SUSPENDED: cerar el hilo en estado supendido.
+    * CREATE_SUSPENDED: crear el hilo en estado suspendido.
 * lpThreadId: puntero a la variable que almacenará el identificador del thread una vez creado.
 ```c++
 for(int i = 0; i < NUM_THREADS; i++) {
@@ -137,20 +137,39 @@ for(int i = 0; i < NUM_THREADS; i++) {
   ```
 ### Prioridades de Hilos
 La prioridad de los hilos es un valor que va desde el 1 al 31, siendo el 31 el más elevado.  
-La prioridad 0 está erservada para la página 0 del hilo.  
+La prioridad 0 está reservada para la página 0 del hilo.  
 La prioridad base es la prioridad asignada al proceso y es la asignada por defecto a los hilos del proceso. Por defecto 8.  
 La prioridad se puede cambiar con:
 * SetPriorityClass: cambia la prioridad base del proceso. Win32.  
 * SetThreadPriority: cambia el puntero a la prioridad. Win32.  
 * KeSetPriorityThread: cambia el valor de la prioridad a un valor absoluto. Kernel.  
 
-En un proceso con Normal Priority Class, con la funcion SetthreadPriority puedes asignar +2, +1, -1, -2. Se puden saturar los valores asignando 1 o 15. Estos son las llamadas prioridades normales. 
-En un proceso con Above Normal Priority class la prioridad base es 10 y se pueden realizar los msimo cambios que con el anterior.  
-En un proceso con High Priority class la prioridad base es 13 y se pueden realizar los msimo cambios que con el anterior.  
-En un proceso con idle Priority class la prioridad base es 4 y se pueden realizar los msimo cambios que con el anterior.  
-En un proceso con Realtime Priority class la prioridad base es 24 y se pueden realizar los msimo cambios que con el anterior pero la saturación será a los valores 16 y 31.  
+En un proceso con Normal Priority Class, con la funcion SetthreadPriority puedes asignar +2, +1, -1, -2. Se pueden saturar los valores asignando 1 o 15. Estos son las llamadas prioridades normales. 
+En un proceso con Above Normal Priority class la prioridad base es 10 y se pueden realizar los mismo cambios que con el anterior.  
+En un proceso con High Priority class la prioridad base es 13 y se pueden realizar los mismo cambios que con el anterior.  
+En un proceso con idle Priority class la prioridad base es 4 y se pueden realizar los mismo cambios que con el anterior.  
+En un proceso con Realtime Priority class la prioridad base es 24 y se pueden realizar los mismo cambios que con el anterior pero la saturación será a los valores 16 y 31.  
 Los hilos que están trabajando en primer plano, windows los aumenta cada poco tiempo con +2.  
 ![Imagen de thread priorities](./images/thread-priorities.png?raw=true "priorities")
+
+Cuando el administrador de hilos tiene que elegir que hilo ocupará el procesador, únicamente tiene en cuenta el nivel de prioridad del proceso. En el caso de que varios hilos con la misma prioridad estén en estado de "ready", el primer hilo en llegar a la cola será ejecutado durante un periodo de tiempo, si después de ese periodo no ha terminado, pasará a la cola otra vez y entrará el siguiente hilo de la misma prioridad.  
+Si un hilo se está ejecutando y entra en la cola un hilo de Prioridad Tiempo Real, el hilo que se estaba ejecutando se para, se le manda a la cola y  se ejecuta el de alta prioridad.  
+#### Quantum
+Es la medida de tiempo que el procesador tiene en cuenta para cambiar de hilo aunque no haya terminado la ejecución.  
+El planificador tiene ticks cada 10 msec o 15 en el caso de los multiprocesadores. El tiempo de quantum en clientes de 2 ticks y en los servidores de 12 ticks.  
+Se puede ver utilizando la herramienta clockres.exe.  
+Se puede modificar cambiando la clave de registro: *HKLM\SYSTEM\CCS\Control\PriorityControl:Win32PrioritySepaaration*  
+Es de 30 msec en clientes y 180 msec en servidores.  
+El hilo que generó la ventana que está en primer plano, recibe un aumento del quantum al triple.
+### Estados de los hilos
+* Inicial (0, init): cuando el hilo es creado.
+* listo (1/7, ready): hay un estado intermedio entre el 1 y el 7 que es deferred, no explicado.
+* Espera (3, standby): es cuando el hilo va a ser el siguiente en ser ejecutado. Aunque lo normal es que el siguiente paso sea Running, puede pasar que otro hilo con mayor prioridad entre en la cola y de espera pase a listo.
+* corriendo (2, running): cuando el procesador está ejecutando el código del hilo.
+* termiando (4, terminate): cuando un hilo termina su ejecución pasa a este estado.
+* esperando (5, waiting): cuando el hilo está esperando por algo, como una entrada por parte del usuario, pasa a este estado. Este hilo pasará a listo cuando ocurra lo que está esperando.
+* Transición (6, transition): cuando un hilo está durante mucho tiempo en espera, el kernel lo pasa a este estado para ahorrar espacio en memoria.
+![Imagen de threads states](./images/threads-states.png?raw=true "states")
 
 ## Manejadores (handles)
 Es el kernel el único que puede obtener un puntero a un objeto y manipularlo. Desde la sesión de un usuario, para poder acceder a un objeto, es necesario un manejador que hace las veces de intermediario. Cuando obtienes un manejador, la dirección de acceso a él es añadida a tu tabla de manejadores y cuando dejas de necesitarlo y llamas a la función de closehandle, lo único que ocurre es el borrado de esa entrada, tu no sabes si el manejador es borrado o no, si otro proceso tiene abierto un manejador contra el mismo objeto se mantendrá activo pero si el número de manejadores abiertos para un objeto se vuelve 0, el objeto se borra a si mismo.  
@@ -180,7 +199,7 @@ No es un proceso real ya que no tiene un ejecutable asociado, espacio asignado.
 ### Proceso del sistema (system process)
 Siempre tiene el PID 4.  
 Representa el espacio y los recursos del kernel.  
-Los hilos del proceso son creaos por el propio kernel o por los drivers que tiene asociados. Nunca corre ningun hilo en el espacio de usuario.  
+Los hilos del proceso son creaos por el propio kernel o por los drivers que tiene asociados. Nunca corre ningún hilo en el espacio de usuario.  
 Los drivers crean hilos con la función PsCreateSystemThread.
 
 ### Administrador de sesiones (Session manager smss.exe)
@@ -193,15 +212,15 @@ Maneja los accesos y salidas de sesión de los usuarios.
 Si el proceso muere, el usuario pierde la sesión en la que está logado y todos los procesos de esa sesión mueren.    
 Es el encargado de capturar la Secure Attention Sequence (SAS) Ctrl+Alt+Del.  
 Es quien lanza el proceso LogonUI.exe para mostrar la ventana de login, puede ser reemplazada esa ventana.  
-Envia la información capturada a LSASS, si la respuesta es satisfactoria, incial la sesión del ususario.
+Envía la información capturada a LSASS, si la respuesta es satisfactoria, inicia la sesión del usuario.
 
 ### Local session Authenticatio SubSystem LSASS
 Es el encargado de llamar al paquete de autenticación adecuado.  
-Cuando recibe unas credenciales válidas, genera un token que representa el perfil de seguridad del usuario y se lo envia a winlogon de respuesta.  
+Cuando recibe unas credenciales válidas, genera un token que representa el perfil de seguridad del usuario y se lo envía a winlogon de respuesta.  
 
 ### Service Control Manager (SCM services.exe)
-Es el respnsable de iniciar, parar e interactuar con los servicios.  
-Puede iniciar servicios cuando arranca el sistema sin necesidad de una sesió interactiva abierta.  
+Es el responsable de iniciar, parar e interactuar con los servicios.  
+Puede iniciar servicios cuando arranca el sistema sin necesidad de una sesión interactiva abierta.  
 Puede correr bajo usuarios especiales:
 * LocalSystem
 * NetworkService
@@ -210,7 +229,7 @@ Tambien se pe
 
 ### Local Session manager (lsm.dll)
 Importada en svchost.exe.  
-gestiona las sesiones de terminal.
+Gestiona las sesiones de terminal.
 
 ## Wow64 (Windows on Windows 64)
 Windows permite la ejecución de binarios de 32bits en una arquiectura de 64.  
