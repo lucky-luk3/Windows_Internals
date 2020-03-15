@@ -15,15 +15,15 @@ Un proceso contiene:
 
 Un proceso termina cuando:
 * Todos sus hilos terminan.
-* Uno de los hilos llama a ExitProcess(Win32), esto ocurre a veces como rutina de cierre del hilo principal, de tal manera que cerrando ese hilo se cierra todo el proceso. Esta es la manera correcta de terminar un proceso ya que da tiempo al proceso y a las dlls a termianr por si mismas e incluso escribir en logs, liberar memoria o guardar información del fichero.  
+* Uno de los hilos llama a ExitProcess(Win32), esto ocurre a veces como rutina de cierre del hilo principal, de tal manera que cerrando ese hilo se cierra todo el proceso. Esta es la manera correcta de terminar un proceso ya que da tiempo al proceso y a las dlls a terminar por si mismas e incluso escribir en logs, liberar memoria o guardar información del fichero.  
 * Uno de los hilos llama a TerminateProcess(Win32), es la manera no recomendada de terminar un proceso. Esta llamada puede hacerse desde el exterior de los hilos del proceso. 
-Algunas páginas de la memoria física pueden ser compartidas, por ejemplo cuando se ejecutan dos instancias de un mismo programa, la página en la memoria física que almacena el ejecutable o dlls compartidas, puede ser compartida.  
+Algunas páginas de la memoria física pueden ser compartidas, por ejemplo, cuando se ejecutan dos instancias de un mismo programa, la página en la memoria física que almacena el ejecutable o dlls compartidas, puede ser compartida.  
 La columna del Administrador de Tareas nos muestra la memoria ocupada por un proceso, pero únicamente aquella que el proceso tiene marcada como memoria privada. Para ver la memoria completa que ocupa un proceso, necesitaremos activar la columna Tamaño de asignación. 
 ### Creación de un proceso
 * Apertura del ejecutable
 * Creación de un objeto en el kernel para administrar esa imagen. Por ejemplo KPROCESS. (Executive process).
 * Creación del hilo principal.
-* Creación de un objeto en el kernel para administrar hilos. por ejemplo KTHREAD o ETHREAD (Executive Thread).
+* Creación de un objeto en el kernel para administrar hilos. Por ejemplo KTHREAD o ETHREAD (Executive Thread).
 * El kernel notifica a CSRSS que un nuevo proceso y un nuevo hilo ha sido creado por LPC.
 * CSRSS crea sus manejadores y estructuras para poder administrar los procesos y los hilos.  
 * Se continua con la creación del proceso y la ejecución de los hilos. 
@@ -145,19 +145,19 @@ La prioridad se puede cambiar con:
 * KeSetPriorityThread: cambia el valor de la prioridad a un valor absoluto. Kernel.  
 
 En un proceso con Normal Priority Class, con la funcion SetthreadPriority puedes asignar +2, +1, -1, -2. Se pueden saturar los valores asignando 1 o 15. Estos son las llamadas prioridades normales. 
-En un proceso con Above Normal Priority class la prioridad base es 10 y se pueden realizar los mismo cambios que con el anterior.  
-En un proceso con High Priority class la prioridad base es 13 y se pueden realizar los mismo cambios que con el anterior.  
-En un proceso con idle Priority class la prioridad base es 4 y se pueden realizar los mismo cambios que con el anterior.  
-En un proceso con Realtime Priority class la prioridad base es 24 y se pueden realizar los mismo cambios que con el anterior pero la saturación será a los valores 16 y 31.  
+En un proceso con Above Normal Priority class la prioridad base es 10 y se pueden realizar los mismos cambios que con el anterior.  
+En un proceso con High Priority class la prioridad base es 13 y se pueden realizar los mismos cambios que con el anterior.  
+En un proceso con idle Priority class la prioridad base es 4 y se pueden realizar los mismos cambios que con el anterior.  
+En un proceso con Realtime Priority class la prioridad base es 24 y se pueden realizar los mismos cambios que con el anterior pero la saturación será a los valores 16 y 31.  
 Los hilos que están trabajando en primer plano, windows los aumenta cada poco tiempo con +2.  
 ![Imagen de thread priorities](./images/thread-priorities.png?raw=true "priorities")
 
 Cuando el administrador de hilos tiene que elegir que hilo ocupará el procesador, únicamente tiene en cuenta el nivel de prioridad del proceso. En el caso de que varios hilos con la misma prioridad estén en estado de "ready", el primer hilo en llegar a la cola será ejecutado durante un periodo de tiempo, si después de ese periodo no ha terminado, pasará a la cola otra vez y entrará el siguiente hilo de la misma prioridad.  
-Si un hilo se está ejecutando y entra en la cola un hilo de Prioridad Tiempo Real, el hilo que se estaba ejecutando se para, se le manda a la cola y  se ejecuta el de alta prioridad.  
+Si un hilo se está ejecutando y entra en la cola un hilo de Prioridad Tiempo Real, el hilo que se estaba ejecutando se para, se le manda a la cola y se ejecuta el de alta prioridad.  
 Si el equipo es multi procesador el algoritmo cambia.  
 ![Imagen de thread scheduling multi-cpu](./images/scheduling-mulicpu.png?raw=true "scheduling")
 #### Quantum
-Es la medida de tiempo que el procesador tiene en cuenta para cambiar de hilo aunque no haya terminado la ejecución.  
+Es la medida de tiempo que el procesador tiene en cuenta para cambiar de hilo, aunque no haya terminado la ejecución.  
 El planificador tiene ticks cada 10 msec o 15 en el caso de los multiprocesadores. El tiempo de quantum en clientes de 2 ticks y en los servidores de 12 ticks.  
 Se puede ver utilizando la herramienta clockres.exe.  
 Se puede modificar cambiando la clave de registro: *HKLM\SYSTEM\CCS\Control\PriorityControl:Win32PrioritySepaaration*  
@@ -173,8 +173,9 @@ El hilo que generó la ventana que está en primer plano, recibe un aumento del 
 * Transición (6, transition): cuando un hilo está durante mucho tiempo en espera, el kernel lo pasa a este estado para ahorrar espacio en memoria.
 ![Imagen de threads states](./images/threads-states.png?raw=true "states")
 ### Sincronización de hilos
+Para el trabajo con hilos concurrentes, podemos usar parallel_for(C++) o Parallel.For(.NET)
 El kernel genera un estado en los objetos llamados señalados (signaled) o no señalados (non-signaled) respecto al que, monitorizando los cambios de estado, podremos gestionar la sincronización.  
-Se puede monitorizar los cambios mediante als funciones:
+Se puede monitorizar los cambios mediante las funciones:
 * Windows API
     * WainForSingleObject
     * WaitForMultipleObjects
@@ -199,10 +200,37 @@ Dependiendo del objeto, será señalado dependiendo de alguna condición.
 * **Timer**  
     * El intervalo expira
 
+#### Sección crítica (CRITICAL_SECTION)
+Es un tipo de estructura de código utilizada para facilitar el control de concurrencia. Esta gestión se realiza en el modo de usuario y es más eficiente que el uso de Mutex.  
+Un hilo puede entrar en la sección (EnterCriticalSection) y salir (LeaveCriticalSection) usando las APIs del usuario.  
+En .NET se utilizan los lockers para esta funcionalidad.  
+
+#### Exclusiones Mutuas (Mutex/Mutant)
+Son algoritmos para evitar que más de un hilo entre en una sección de código crítica. EL proceso que está ocupando el mutex(WaitForSingleObject), es el dueño del mismo. El mutex se ejecuta en el modo del kernel.  
+Son usados para evitar que varios hilos modifiquen un fichero a la vez por ejemplo. Cuando el hilo termina la ejecución de código en esa sección, se libera el mutex (ReleaseMutex) y si otro hilo está esperando por él, puede continuar la ejecución.  
+Cuando se crea un mutex es necesario asignarle un nombre, cuando el proceso crea el manejador para el mutex, cada procesador crea su propio manejador y si no le asignamos un nombre, no habrá relación entre ellos y habrá colisiones.  
+
+#### Semaforos (Semaphore)
+Cuando el semaforo es iniciado(CreateSemaphore), se le asigna un numero de contador. Cuando un hilo quiere ejecutar una sección de código controlada por un semáforo, lanzará una petición al semaforo(WaitForSingleObject) y este, en el caso de tener su contador a más de 0, reducirá su contador en 1 y permitirá al hilo la ejecución de código. Si por el contrario, el semáforo está a 0 cuando el hilo pregunta, el hilo tendrá que esperar.  
+Hay una mayor flexibilidad con los semáforos que con los mutex ya que, en el caso de los semáforos, puede liberar el semáforo (ReleaseSemaphore) un hilo diferente que el que lo ocupó.  
+
+#### Eventos (Event/Notification)
+Elemento binario.  
+Cuando creas un evento o una notificación, el resto de objetos del sistema pueden quedar a la espera de un cambio de estado del evento y reaccionar en el caso de que el estado cambie. Por ejemplo, cuando se ejecuta el pagado de la máquina, todos los hilos están pendientes de ese evento y en el momento que se activa, proceden a cerrarse.  
+
+
+
 ## Manejadores (handles)
-Es el kernel el único que puede obtener un puntero a un objeto y manipularlo. Desde la sesión de un usuario, para poder acceder a un objeto, es necesario un manejador que hace las veces de intermediario. Cuando obtienes un manejador, la dirección de acceso a él es añadida a tu tabla de manejadores y cuando dejas de necesitarlo y llamas a la función de closehandle, lo único que ocurre es el borrado de esa entrada, tu no sabes si el manejador es borrado o no, si otro proceso tiene abierto un manejador contra el mismo objeto se mantendrá activo pero si el número de manejadores abiertos para un objeto se vuelve 0, el objeto se borra a si mismo.  
+Es el kernel el único que puede obtener un puntero a un objeto y manipularlo. Desde la sesión de un usuario, para poder acceder a un objeto, es necesario un manejador que hace las veces de intermediario. Cuando obtienes un manejador, la dirección de acceso a él es añadida a tu tabla de manejadores y cuando dejas de necesitarlo y llamas a la función de closehandle, lo único que ocurre es el borrado de esa entrada, tú no sabes si el manejador es borrado o no, si otro proceso tiene abierto un manejador contra el mismo objeto se mantendrá activo, pero si el número de manejadores abiertos para un objeto se vuelve 0, el objeto se borra a sí mismo.  
 Desde ProcessExplorer podemos ver los manejadores de un proceso y podemos activar la vista de ObjectAddress, esta dirección es la dirección del objeto en la sesión de kernel.  
 La columna access indican las flags sobre qué podemos hacer con ese manejador en concreto.
+
+## Trabajos (Jobs)
+Esta estructura nos permite agrupar procesos relacionados entre sí.  
+Por ejemplo, es útil para limitar el número máximo de memoria que pueden ocupar el grupo o para gestionar mejor la finalización de esos procesos.  
+Cuando creamos el trabajo (CreateJobObject) nos generará un manejador que después usaremos para asignarle el grupo a un proceso creado (AssignProcessToJobObject). Podremos terminar todos los procesos de un trabajo (TerminateJobObject).
+
+
 
 ## Arquitectura
 ![Imagen de arquitectura](./images/user-kernel_mode.PNG?raw=true "Ficheros")  
@@ -231,8 +259,8 @@ Los hilos del proceso son creaos por el propio kernel o por los drivers que tien
 Los drivers crean hilos con la función PsCreateSystemThread.
 
 ### Administrador de sesiones (Session manager smss.exe)
-Es el primer proceso  que crea system.  
-Es el encargado de crear las variables del sistema, lanza los procesos de los subsistemas (csrss.exe), lanzar copias de si mismo en las sesiones nuevas, ese proceso de si mismo creado, lanza winlogon y csrss en esa sesión y muere.  
+Es el primer proceso que crea system.  
+Es el encargado de crear las variables del sistema, lanza los procesos de los subsistemas (csrss.exe), lanzar copias de sí mismo en las sesiones nuevas, ese proceso de sí mismo creado, lanza winlogon y csrss en esa sesión y muere.  
 Monitoriza los procesos de subsistemas y si alguno muere, genera un pantallazo azul.  
 
 ### Winlogon
