@@ -170,8 +170,9 @@ El hilo que generó la ventana que está en primer plano, recibe un aumento del 
 * corriendo (2, running): cuando el procesador está ejecutando el código del hilo.
 * termiando (4, terminate): cuando un hilo termina su ejecución pasa a este estado.
 * esperando (5, waiting): cuando el hilo está esperando por algo, como una entrada por parte del usuario, pasa a este estado. Este hilo pasará a listo cuando ocurra lo que está esperando.
-* Transición (6, transition): cuando un hilo está durante mucho tiempo en espera, el kernel lo pasa a este estado para ahorrar espacio en memoria.
+* Transición (6, transition): cuando un hilo está durante mucho tiempo en espera, el kernel lo pasa a este estado para ahorrar espacio en memoria.  
 ![Imagen de threads states](./images/threads-states.png?raw=true "states")
+
 ### Sincronización de hilos
 Para el trabajo con hilos concurrentes, podemos usar parallel_for(C++) o Parallel.For(.NET)
 El kernel genera un estado en los objetos llamados señalados (signaled) o no señalados (non-signaled) respecto al que, monitorizando los cambios de estado, podremos gestionar la sincronización.  
