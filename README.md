@@ -7,7 +7,7 @@ El proceso no conoce ni necesita las direcciones físicas de la memoria, únicam
 
 Un proceso contiene:  
 * Un espacio de memoria privado.
-* Una cantidad de memoria física asociada (working set)
+* Una cantidad de memoria física privada asociada (working set)
 * El fichero ejecutable, un enlace al fichero en disco que contiene la función main.
 * Una tabla del indicador de los manejadores de objetos del kernel asociados a él.  
 * Un token de seguridad que contiene los descriptores de seguridad del proceso.    
@@ -19,6 +19,23 @@ Un proceso termina cuando:
 * Uno de los hilos llama a TerminateProcess(Win32), es la manera no recomendada de terminar un proceso. Esta llamada puede hacerse desde el exterior de los hilos del proceso. 
 Algunas páginas de la memoria física pueden ser compartidas, por ejemplo, cuando se ejecutan dos instancias de un mismo programa, la página en la memoria física que almacena el ejecutable o dlls compartidas, puede ser compartida.  
 La columna del Administrador de Tareas nos muestra la memoria ocupada por un proceso, pero únicamente aquella que el proceso tiene marcada como memoria privada. Para ver la memoria completa que ocupa un proceso, necesitaremos activar la columna Tamaño de asignación. 
+
+### Procesos protegidos
+En Windows Vista, fueron incluidos los procesos protegidos, esto implica que ciertos procesos en el sistema, no serán accesibles por el resto del sistema.
+Esto se implementó para poder reproducir contenido multimedia DRM con la certeza de que otro proceso no podría acceder al espacio de memoria del reproductor y volcar el contenido.
+Estos procesos únicamente pueden carcar unas librerias firmadas firmadas con un certificado especial.
+#### Procesos Protegidos Light
+Fueron introducidos en Windows 8.1, ofrecian varios niveles de protección en los procesos.  
+Incialmente fueron pensados para el software antivirus y la mayoria de los procesos del sistema fueron protegidos con esta medida.  
+Esto permite que un proceso con privilegios de administardor no tenga porque tener permisos de acceso a un proceso protegido.  
+Esta protección es unicamnete en User Mode, así que un administrador podría ejecutar un driver en Kernel Mode y tener acceso a todo.  
+
+![Imagen de niveles de seguriad en procesos protegidos](./images/protected_processes_levels.png?raw=true "PPL Levels")  
+Los valores válidos para marcar a los procesos como protegidos en EPE son:  
+![Imagen de valores de seguriad en procesos protegidos](./images/protected_processes_values.png?raw=true "PPL Levels")
+Podemos ver estos valores en ProcessExplorer, con la columna Protection. ProcessExplorer no nos mostrará como protegidos los procesos del kernel y no nos mostrará las librerias cargadas por los procesos protegisdos ya que no tiene permisos para acceder a esa información.  
+ 
+
 ### Creación de un proceso
 * Apertura del ejecutable
 * Creación de un objeto en el kernel para administrar esa imagen. Por ejemplo KPROCESS. (Executive process).
@@ -247,7 +264,47 @@ Los Enviroment Subsystem pueden ser win32, unix... en el caso de win 32, la dll 
 Los servicios son procesos que arrancan cuando se carga el subsistema y corren bajo local system, network service  local service.  
 Dentro de procesos del sistema está por ejemplo csrss.exe, SCM (service control manager), smss.exe, si estos procesos se corrompen producen un error fatal en el sistema.
 
+## Arquitectura en Windows 10
+La arquietectura en Windows 10, ha tenido varios cambios.
+![Imagen de arquitectura](./images/architecture-win10.PNG?raw=true "Arquitectura")
+
+## Seguridad Basada en Virtualización (Virtualization Based Security)(Win10 Enterprise-WS2016)
+Está caracteristica no está disponible en todas las versiones de Win10.
+Se basa en la creación de dos niveles de virtualización en el sistema, uno confiable y otro no.
+El VTL0 (Virtual Trust Level) es el que tiene privilegios "normales".
+El VTL1 es el nivel de confianza para el sistema.
+Ambos niveles disponene de un Modo Kernel y un Modo Usuario. ¿Sesión 0 y 1?. 
+Lo que diferencia el VTL 1 es que es capaz de acceder a todo loq ue hay en VTL 0 pero no al revés.
+Por debajo de ambos, tenemos al Hyper-V que es quién gestiona todos los permisos.
+Esto permite que incluso un driver en VTL 0 no pueda acceder al kernel de VTL 1.
+Para que esta tecnología pueda funcionar, se añadió la tecnología de Traducción de Direcciones de Segundo Nivel (SLAT), esto permite que el kernel en VTL 1 pueda crear direcciones intermedias que hacen que desde VTL 0 sea imposibible acceder a direcciones en VTL 1.
+Otra tecnología que se implementó es I/O MMU (I/O Memory Management Unit), esto le permite al Hipervidor o al kernel de VTL 1, ocultar cosas en el espacio I/O. 
+
+![Imagen de arquitectura Wow64](./images/VBS.PNG?raw=true "VBS")
+
+### Credential Guard
+Una de las caracteristicas que dependen de VBS es Credential Guard. Esta caracteristica permite almacenar las credenciales en el proceso "Lsaiso.exe" en vez del típico (Lsass.exe).
+Lsaiso.exe está en VTL 1, de esta manera, incluso un proceso con privvilegios de system en VTL 0, no podrá acceder al espacio de memoria de Lsaiso.exe.
+
+### Device Guard
+Esta caracteristica, permite únicamente ejecutar aplicaciones confiables en el sistema.
+Este control se hace a nivel de Hypervisor de tal manera que bypassearlo es muy complejo.
+
+### Secure Driver Framework (SDF)
+Es un framework que ha autorizado Microsoft para el desarrollo de drivel en VTL 1.
+
+## Pico Processes
+Este tipo de procesos, son procesos mínimos que únicamente contienen las direcciones de memoria del driver que controla estos procesos. (Pico provider)
+Cualquier llamad al sistema, es recibida por este driver no por el manejador oportuno.
+Esto permite por ejemplo que el Windows Subsystem for Linux, tenga su propio Pico Provider.
+
 ## Procesos importantes
+### Secure Kernel (Win 10 Ent)
+Representa al kernel en VTL 1.
+Es análogo a System en VTL 0.
+No dispone de todas las herramientas típicas del kernel, esas están en System, como por ejemplo la gestion de la memoria, gestión de hilos...
+
+
 ### Proceso inactivo (idle process)
 Siempre tiene el PID 0.  
 Es el proceso que ocupa los hilos del procesador cuando no hay tareas que pueda ocupar.  
@@ -291,8 +348,26 @@ Gestiona las sesiones de terminal.
 ## Wow64 (Windows on Windows 64)
 Windows permite la ejecución de binarios de 32bits en una arquiectura de 64.  
 Para ello, tiene un libreria de 32 bits de NtDll y otras dlls de conversión.
-![Imagen de arquitectura Wow64](./images/win32-64.PNG?raw=true "Ficheros")
+![Imagen de arquitectura Wow64](./images/win32-64.PNG?raw=true "Ficheros")  
 Existen algunas limitaciones.  
 Los procesos de 64 bits no pueden cargar una dll de 32 y viceversa.  
 Algunas APIs no son soportadas por wow64.  
 
+## Memory Compression (Win 10 Ent.)
+Es un proceso "mínimo".  
+Contiene la memoria comprimida en el espacio de memoria del usuario.  
+No es mostrado por el Task Manager para evitar que los usuarios crean que les está consumiendo mucha memoria ese proceso.
+
+## Segregación de Win32K.sys
+Este driver, es el encargado de la interfaz gráfica en Windows.  
+En la vesión del kernel NT 4, fue movido al kernel para mejorar eficiencia.  
+En Windows 10, este driver se ha segregado par aumentar la seguridad y para aumentar la eficacia, creando tres versiones del mismo.
+* Win32kMin.sys
+* Win32KBase.sys
+* Win32KFull.sys
+
+## Procesos UWP (Universal Windows Platform)
+Son las llamadas aplicaciones metro, strore, moder...  
+Estas aplicaciones incluyen en un manifest la declaración de caracteristicas necesarias para su funcionamiento, como permisos de cámara o cosas así. El usuario puede aceptarlas al instalar la aplicación.  
+La aplicación, unicamente puede tener acceso a aquello que ha declarado.  
+Estas aplicaciones son ejecutadas con los permisos de AppContainer
