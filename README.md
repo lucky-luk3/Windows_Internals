@@ -23,22 +23,22 @@ La columna del Administrador de Tareas nos muestra la memoria ocupada por un pro
 ### Procesos protegidos
 En Windows Vista, fueron incluidos los procesos protegidos, esto implica que ciertos procesos en el sistema, no serán accesibles por el resto del sistema.
 Esto se implementó para poder reproducir contenido multimedia DRM con la certeza de que otro proceso no podría acceder al espacio de memoria del reproductor y volcar el contenido.
-Estos procesos únicamente pueden carcar unas librerias firmadas firmadas con un certificado especial.
+Estos procesos únicamente pueden cargar unas librerías firmadas con un certificado especial.
 #### Procesos Protegidos Light
-Fueron introducidos en Windows 8.1, ofrecian varios niveles de protección en los procesos.  
-Incialmente fueron pensados para el software antivirus y la mayoria de los procesos del sistema fueron protegidos con esta medida.  
-Esto permite que un proceso con privilegios de administardor no tenga porque tener permisos de acceso a un proceso protegido.  
-Esta protección es unicamnete en User Mode, así que un administrador podría ejecutar un driver en Kernel Mode y tener acceso a todo.  
+Fueron introducidos en Windows 8.1, ofrecían varios niveles de protección en los procesos.  
+Inicialmente fueron pensados para el software antivirus y la mayoría de los procesos del sistema fueron protegidos con esta medida.  
+Esto permite que un proceso con privilegios de administrador no tenga por qué tener permisos de acceso a un proceso protegido.  
+Esta protección es únicamente en User Mode, así que un administrador podría ejecutar un driver en Kernel Mode y tener acceso a todo.  
 
-![Imagen de niveles de seguriad en procesos protegidos](./images/protected_processes_levels.png?raw=true "PPL Levels")  
+![Imagen de niveles de seguridad en procesos protegidos](./images/protected_processes_levels.png?raw=true "PPL Levels")  
 Los valores válidos para marcar a los procesos como protegidos en EPE son:  
 ![Imagen de valores de seguriad en procesos protegidos](./images/protected_processes_values.png?raw=true "PPL Levels")
-Podemos ver estos valores en ProcessExplorer, con la columna Protection. ProcessExplorer no nos mostrará como protegidos los procesos del kernel y no nos mostrará las librerias cargadas por los procesos protegisdos ya que no tiene permisos para acceder a esa información.  
+Podemos ver estos valores en ProcessExplorer, con la columna Protection. ProcessExplorer no nos mostrará como protegidos los procesos del kernel y no nos mostrará las librerías cargadas por los procesos protegidos ya que no tiene permisos para acceder a esa información.  
  
 
 ### Creación de un proceso
 * Apertura del ejecutable
-* Creación de un objeto en el kernel para administrar esa imagen. Por ejemplo KPROCESS. (Executive process).
+* Creación de un objeto en el kernel para administrar esa imagen. Por ejemplo, KPROCESS. (Executive process).
 * Creación del hilo principal.
 * Creación de un objeto en el kernel para administrar hilos. Por ejemplo KTHREAD o ETHREAD (Executive Thread).
 * El kernel notifica a CSRSS que un nuevo proceso y un nuevo hilo ha sido creado por LPC.
@@ -119,12 +119,19 @@ Un hilo contiene:
 * Cola de mensajes y ventanas que el hilo ha creado. (Opcional)
 * Prioridad. Número de 0-31. Prioridad de ejecución cuando sea programado. 31 es la mayor prioridad.
 * Estado: Running, ready, waiting.  
+En la parte del Kernel, el hilo contiene dos estructuras:
+* ETHREAD: principal estructura del hilo, maneja la mayoría de la información del hilo.
+* KTHREAD: es la primera estructura del ETHREAD. 
 
 En la parte del stack del hilo, podemos ver las llamadas desde el user mode al kernel mode.  
+
 Un hilo termina cuando:
 * El hilo devuelve un valor con return.
 * Función ExitThread(Win32) forma correcta de hacerlo, se sale de las librerías que tenga implementadas...
 * TerminateThread es la forma de forzar la finalización del hilo, sin que escriba en logs o termine las librerías inicializadas.  
+
+En Windows 10 y Server 2016 se añadió la opción de asignarle un nombre a los hilos. Este nombre no puede ser utilizado para acceder al
+hilo, es únicamente para debugging.
 ### Creación de hilos
 Se utilizará la función CreateThread(Win32).  
 ```c++
@@ -147,10 +154,10 @@ HANDLE CreateThread(
 * lpThreadId: puntero a la variable que almacenará el identificador del thread una vez creado.
 ```c++
 for(int i = 0; i < NUM_THREADS; i++) {
-		data[i].first = first + i * delta;
-		data[i].last = i == NUM_THREADS - 1 ? last : first + (i + 1) * delta - 1;
-		hThread[i] = CreateThread(nullptr, 0, CalcPrimes, &data[i], 0, &id);
-	}
+      data[i].first = first + i * delta;
+      data[i].last = i == NUM_THREADS - 1 ? last : first + (i + 1) * delta - 1;
+      hThread[i] = CreateThread(nullptr, 0, CalcPrimes, &data[i], 0, &id);
+   }
   ```
 ### Prioridades de Hilos
 La prioridad de los hilos es un valor que va desde el 1 al 31, siendo el 31 el más elevado.  
@@ -161,17 +168,18 @@ La prioridad se puede cambiar con:
 * SetThreadPriority: cambia el puntero a la prioridad. Win32.  
 * KeSetPriorityThread: cambia el valor de la prioridad a un valor absoluto. Kernel.  
 
-En un proceso con Normal Priority Class, con la funcion SetthreadPriority puedes asignar +2, +1, -1, -2. Se pueden saturar los valores asignando 1 o 15. Estos son las llamadas prioridades normales. 
+En un proceso con Normal Priority Class, con la función SetthreadPriority puedes asignar +2, +1, -1, -2. Se pueden saturar los valores asignando 1 o 15. Estos son las llamadas prioridades normales. 
 En un proceso con Above Normal Priority class la prioridad base es 10 y se pueden realizar los mismos cambios que con el anterior.  
 En un proceso con High Priority class la prioridad base es 13 y se pueden realizar los mismos cambios que con el anterior.  
 En un proceso con idle Priority class la prioridad base es 4 y se pueden realizar los mismos cambios que con el anterior.  
 En un proceso con Realtime Priority class la prioridad base es 24 y se pueden realizar los mismos cambios que con el anterior pero la saturación será a los valores 16 y 31.  
-Los hilos que están trabajando en primer plano, windows los aumenta cada poco tiempo con +2.  
+Los hilos que están trabajando en primer plano, Windows los aumenta cada poco tiempo con +2.  
 ![Imagen de thread priorities](./images/thread-priorities.png?raw=true "priorities")
 
+### Planificación de hilos
 Cuando el administrador de hilos tiene que elegir que hilo ocupará el procesador, únicamente tiene en cuenta el nivel de prioridad del proceso. En el caso de que varios hilos con la misma prioridad estén en estado de "ready", el primer hilo en llegar a la cola será ejecutado durante un periodo de tiempo, si después de ese periodo no ha terminado, pasará a la cola otra vez y entrará el siguiente hilo de la misma prioridad.  
 Si un hilo se está ejecutando y entra en la cola un hilo de Prioridad Tiempo Real, el hilo que se estaba ejecutando se para, se le manda a la cola y se ejecuta el de alta prioridad.  
-Si el equipo es multi procesador el algoritmo cambia.  
+Si el equipo es multiprocesador el algoritmo cambia.  
 ![Imagen de thread scheduling multi-cpu](./images/scheduling-mulicpu.png?raw=true "scheduling")
 #### Quantum
 Es la medida de tiempo que el procesador tiene en cuenta para cambiar de hilo, aunque no haya terminado la ejecución.  
@@ -182,7 +190,9 @@ Es de 30 msec en clientes y 180 msec en servidores.
 El hilo que generó la ventana que está en primer plano, recibe un aumento del quantum al triple.
 ### Estados de los hilos
 * Inicial (0, init): cuando el hilo es creado.
-* listo (1/7, ready): hay un estado intermedio entre el 1 y el 7 que es deferred, no explicado.
+* listo (1/7, ready): hay un estado intermedio entre el 1 y el 7 que es deferred, no explicado. Esta es la cola de procesos que quieren ser ejecutados.
+    * Antes de Windows 8, cada procesador tenia su propia cola de procesos en estado ready.
+    * Después de Windows 8, hay una cola única de procesos en estado listo para mejorar la eficiencia.
 * Espera (3, standby): es cuando el hilo va a ser el siguiente en ser ejecutado. Aunque lo normal es que el siguiente paso sea Running, puede pasar que otro hilo con mayor prioridad entre en la cola y de espera pase a listo.
 * corriendo (2, running): cuando el procesador está ejecutando el código del hilo.
 * termiando (4, terminate): cuando un hilo termina su ejecución pasa a este estado.
@@ -212,7 +222,7 @@ Dependiendo del objeto, será señalado dependiendo de alguna condición.
 * **Evento**  
     * La bandera del evento es lanzada  
 * **Semaforo**  
-    * El contador del semaforo es mayor de cero  
+    * El contador del semáforo es mayor de cero  
 * **Fichero o puerto I/O**  
     * La operación se completa
 * **Timer**  
@@ -225,23 +235,46 @@ En .NET se utilizan los lockers para esta funcionalidad.
 
 #### Exclusiones Mutuas (Mutex/Mutant)
 Son algoritmos para evitar que más de un hilo entre en una sección de código crítica. EL proceso que está ocupando el mutex(WaitForSingleObject), es el dueño del mismo. El mutex se ejecuta en el modo del kernel.  
-Son usados para evitar que varios hilos modifiquen un fichero a la vez por ejemplo. Cuando el hilo termina la ejecución de código en esa sección, se libera el mutex (ReleaseMutex) y si otro hilo está esperando por él, puede continuar la ejecución.  
+Son usados para evitar que varios hilos modifiquen un fichero a la vez, por ejemplo. Cuando el hilo termina la ejecución de código en esa sección, se libera el mutex (ReleaseMutex) y si otro hilo está esperando por él, puede continuar la ejecución.  
 Cuando se crea un mutex es necesario asignarle un nombre, cuando el proceso crea el manejador para el mutex, cada procesador crea su propio manejador y si no le asignamos un nombre, no habrá relación entre ellos y habrá colisiones.  
 
-#### Semaforos (Semaphore)
-Cuando el semaforo es iniciado(CreateSemaphore), se le asigna un numero de contador. Cuando un hilo quiere ejecutar una sección de código controlada por un semáforo, lanzará una petición al semaforo(WaitForSingleObject) y este, en el caso de tener su contador a más de 0, reducirá su contador en 1 y permitirá al hilo la ejecución de código. Si por el contrario, el semáforo está a 0 cuando el hilo pregunta, el hilo tendrá que esperar.  
+#### Semáforos (Semaphore)
+Cuando el semáforo es iniciado(CreateSemaphore), se le asigna un numero de contador. Cuando un hilo quiere ejecutar una sección de código controlada por un semáforo, lanzará una petición al semáforo(WaitForSingleObject) y este, en el caso de tener su contador a más de 0, reducirá su contador en 1 y permitirá al hilo la ejecución de código. Si por el contrario, el semáforo está a 0 cuando el hilo pregunta, el hilo tendrá que esperar.  
 Hay una mayor flexibilidad con los semáforos que con los mutex ya que, en el caso de los semáforos, puede liberar el semáforo (ReleaseSemaphore) un hilo diferente que el que lo ocupó.  
 
 #### Eventos (Event/Notification)
 Elemento binario.  
 Cuando creas un evento o una notificación, el resto de objetos del sistema pueden quedar a la espera de un cambio de estado del evento y reaccionar en el caso de que el estado cambie. Por ejemplo, cuando se ejecuta el pagado de la máquina, todos los hilos están pendientes de ese evento y en el momento que se activa, proceden a cerrarse.  
 
+### Afinidad de procesador
+La afinidad de procesador proporciona la posibilidad de elegir que procesador queremos que ejecute los hilos
+de un proceso concreto. Esta función es a nivel de proceso y los hilos no pueden escapar de este control.  
+En Windows 10 se incluyó la posibilidad de que los hilos puedan usar un procesador determinado.  
+SetProcessDefaultCpuSets asigna un procesador a todos los hilos.  
+SetThreadSelectedCpuSets asigna un procesador a ciertos hilos.  
+Esta funcionalidad es utilizada por el modo de juego añadido en Windows 10 RS2, esto permite que los procesos del 
+sistema no afecten a la eficiencia de los hilos del juego.
 
+### Reparto justo de CPU
+En un equipo con varias sesiones activas, puede ocurrir que una sesión genere hilos con prioridad alta
+que provoquen que el procesador esté únicamente ocupado con ellos, no permitiendo ocupar la CPU
+a los procesos de otras sesiones.  
+Esto no aplica a los procesos del sistema como smss.  
+Para gestionar esto se creó DFSS (Dynamic Fair Share Scheduling), que puede ser activado.  
+Cuando se crea un grupo de reparto, para una sesión concreta por ejemplo, en esta se marca una política en la que se asignara 
+un porcentaje de uso de procesador o una prioridad para los procesos e hilos que contiene.  
+También se crea un contador que controla el tiempo de ejecución de CPU de los hilos para su grupo.
+Se habilita añadiendo el valor "EnableCpuQuota=1" en las claves:
+* HKLM\System\Current Control Set\Control\Session Manager\Quota System
+* HKLM\Software\Policies\Microsoft\Windows\Session Manager\Quota System
 
 ## Manejadores (handles)
 Es el kernel el único que puede obtener un puntero a un objeto y manipularlo. Desde la sesión de un usuario, para poder acceder a un objeto, es necesario un manejador que hace las veces de intermediario. Cuando obtienes un manejador, la dirección de acceso a él es añadida a tu tabla de manejadores y cuando dejas de necesitarlo y llamas a la función de closehandle, lo único que ocurre es el borrado de esa entrada, tú no sabes si el manejador es borrado o no, si otro proceso tiene abierto un manejador contra el mismo objeto se mantendrá activo, pero si el número de manejadores abiertos para un objeto se vuelve 0, el objeto se borra a sí mismo.  
 Desde ProcessExplorer podemos ver los manejadores de un proceso y podemos activar la vista de ObjectAddress, esta dirección es la dirección del objeto en la sesión de kernel.  
-La columna access indican las flags sobre qué podemos hacer con ese manejador en concreto.
+La columna access indican las flags sobre qué podemos hacer con ese manejador en concreto.  
+Se crearon los CPU Sets para poder asignar diferentes procesadores para los hilos que, por ejemplo, crea el sistema de manera independiente sobre el proceso que ha 
+creado el desarrollador, como svchost.  
+ 
 
 ## Trabajos (Jobs)
 Esta estructura nos permite agrupar procesos relacionados entre sí.  
@@ -265,44 +298,65 @@ Los servicios son procesos que arrancan cuando se carga el subsistema y corren b
 Dentro de procesos del sistema está por ejemplo csrss.exe, SCM (service control manager), smss.exe, si estos procesos se corrompen producen un error fatal en el sistema.
 
 ## Arquitectura en Windows 10
-La arquietectura en Windows 10, ha tenido varios cambios.
+La arquitectura en Windows 10, ha tenido varios cambios.
 ![Imagen de arquitectura](./images/architecture-win10.PNG?raw=true "Arquitectura")
 
 ## Seguridad Basada en Virtualización (Virtualization Based Security)(Win10 Enterprise-WS2016)
-Está caracteristica no está disponible en todas las versiones de Win10.
+Está característica no está disponible en todas las versiones de Win10.
 Se basa en la creación de dos niveles de virtualización en el sistema, uno confiable y otro no.
 El VTL0 (Virtual Trust Level) es el que tiene privilegios "normales".
 El VTL1 es el nivel de confianza para el sistema.
-Ambos niveles disponene de un Modo Kernel y un Modo Usuario. ¿Sesión 0 y 1?. 
-Lo que diferencia el VTL 1 es que es capaz de acceder a todo loq ue hay en VTL 0 pero no al revés.
+Ambos niveles disponen de un Modo Kernel y un Modo Usuario. ¿Sesión 0 y 1?. 
+Lo que diferencia el VTL 1 es que es capaz de acceder a todo lo que hay en VTL 0 pero no al revés.
 Por debajo de ambos, tenemos al Hyper-V que es quién gestiona todos los permisos.
 Esto permite que incluso un driver en VTL 0 no pueda acceder al kernel de VTL 1.
-Para que esta tecnología pueda funcionar, se añadió la tecnología de Traducción de Direcciones de Segundo Nivel (SLAT), esto permite que el kernel en VTL 1 pueda crear direcciones intermedias que hacen que desde VTL 0 sea imposibible acceder a direcciones en VTL 1.
-Otra tecnología que se implementó es I/O MMU (I/O Memory Management Unit), esto le permite al Hipervidor o al kernel de VTL 1, ocultar cosas en el espacio I/O. 
+Para que esta tecnología pueda funcionar, se añadió la tecnología de Traducción de Direcciones de Segundo Nivel (SLAT), esto permite que el kernel en VTL 1 pueda crear direcciones intermedias que hacen que desde VTL 0 sea imposible acceder a direcciones en VTL 1.
+Otra tecnología que se implementó es I/O MMU (I/O Memory Management Unit), esto le permite al Hipervisor o al kernel de VTL 1, ocultar cosas en el espacio I/O. 
 
 ![Imagen de arquitectura Wow64](./images/VBS.PNG?raw=true "VBS")
 
 ### Credential Guard
-Una de las caracteristicas que dependen de VBS es Credential Guard. Esta caracteristica permite almacenar las credenciales en el proceso "Lsaiso.exe" en vez del típico (Lsass.exe).
-Lsaiso.exe está en VTL 1, de esta manera, incluso un proceso con privvilegios de system en VTL 0, no podrá acceder al espacio de memoria de Lsaiso.exe.
+Una de las características que dependen de VBS es Credential Guard. Esta característica permite almacenar las credenciales en el proceso "Lsaiso.exe" en vez del típico (Lsass.exe).
+Lsaiso.exe está en VTL 1, de esta manera, incluso un proceso con privilegios de system en VTL 0, no podrá acceder al espacio de memoria de Lsaiso.exe.
 
 ### Device Guard
-Esta caracteristica, permite únicamente ejecutar aplicaciones confiables en el sistema.
+Esta característica, permite únicamente ejecutar aplicaciones confiables en el sistema.
 Este control se hace a nivel de Hypervisor de tal manera que bypassearlo es muy complejo.
 
 ### Secure Driver Framework (SDF)
-Es un framework que ha autorizado Microsoft para el desarrollo de drivel en VTL 1.
+Es un framework que ha autorizado Microsoft para el desarrollo de driver en VTL 1.
+
+## Procesos UWP (Universal Windows Platform)
+Son las llamadas aplicaciones metro, strore, moder...  
+Estas aplicaciones incluyen en un manifest la declaración de características necesarias para su funcionamiento, como permisos de cámara o cosas así. El usuario puede aceptarlas al instalar la aplicación.  
+La aplicación, únicamente puede tener acceso a aquello que ha declarado.    
+Estas aplicaciones son ejecutadas con los permisos de AppContainer.  
+En Process Explorer, los procesos que tienen Package Name, son procesos UWP.  
+No está documentado por Microsoft cómo crear este tipo de procesos, si utilizamos el command line del Process Explorer, nos saldrá un error.  
+Una de las maneras de lanzar estos procesos es mediante la aplicación MetroManager.  
+
+
+## Minimal Processes
+Estos procesos no cargan NtDll u otra librería de subsistema.  
+No disponen de un espacio de memoria de usuario.  
+No tienen PEB o TEBs.  
+No es posible crear estos procesos desde el user mode.  
+El espacio de memoria es creado y usado únicamente por hilos del kernel. 
 
 ## Pico Processes
-Este tipo de procesos, son procesos mínimos que únicamente contienen las direcciones de memoria del driver que controla estos procesos. (Pico provider)
-Cualquier llamad al sistema, es recibida por este driver no por el manejador oportuno.
-Esto permite por ejemplo que el Windows Subsystem for Linux, tenga su propio Pico Provider.
+Son procesos mínimos soportan drivers.  
+Únicamente contienen las direcciones de memoria del driver que controla estos procesos (Pico provider).  
+Cualquier llamad al sistema, es recibida por este driver no por el manejador oportuno.  
+Esto permite por ejemplo que el Windows Subsystem for Linux, tenga su propio Pico Provider.  
+Estos procesos son creados en el arranque.
+
+![Imagen de arquitectura Wow64](./images/summary_process_types.png?raw=true "summary_process_types")
 
 ## Procesos importantes
 ### Secure Kernel (Win 10 Ent)
 Representa al kernel en VTL 1.
 Es análogo a System en VTL 0.
-No dispone de todas las herramientas típicas del kernel, esas están en System, como por ejemplo la gestion de la memoria, gestión de hilos...
+No dispone de todas las herramientas típicas del kernel, esas están en System, como por ejemplo la gestión de la memoria, gestión de hilos...
 
 
 ### Proceso inactivo (idle process)
@@ -346,8 +400,8 @@ Importada en svchost.exe.
 Gestiona las sesiones de terminal.
 
 ## Wow64 (Windows on Windows 64)
-Windows permite la ejecución de binarios de 32bits en una arquiectura de 64.  
-Para ello, tiene un libreria de 32 bits de NtDll y otras dlls de conversión.
+Windows permite la ejecución de binarios de 32bits en una arquitectura de 64.  
+Para ello, tiene un librería de 32 bits de NtDll y otras dlls de conversión.  
 ![Imagen de arquitectura Wow64](./images/win32-64.PNG?raw=true "Ficheros")  
 Existen algunas limitaciones.  
 Los procesos de 64 bits no pueden cargar una dll de 32 y viceversa.  
@@ -360,14 +414,50 @@ No es mostrado por el Task Manager para evitar que los usuarios crean que les es
 
 ## Segregación de Win32K.sys
 Este driver, es el encargado de la interfaz gráfica en Windows.  
-En la vesión del kernel NT 4, fue movido al kernel para mejorar eficiencia.  
-En Windows 10, este driver se ha segregado par aumentar la seguridad y para aumentar la eficacia, creando tres versiones del mismo.
+En la versión del kernel NT 4, fue movido al kernel para mejorar eficiencia.  
+En Windows 10, este driver se ha segregado para aumentar la seguridad y para aumentar la eficacia, creando tres versiones del mismo.
 * Win32kMin.sys
 * Win32KBase.sys
 * Win32KFull.sys
 
-## Procesos UWP (Universal Windows Platform)
-Son las llamadas aplicaciones metro, strore, moder...  
-Estas aplicaciones incluyen en un manifest la declaración de caracteristicas necesarias para su funcionamiento, como permisos de cámara o cosas así. El usuario puede aceptarlas al instalar la aplicación.  
-La aplicación, unicamente puede tener acceso a aquello que ha declarado.  
-Estas aplicaciones son ejecutadas con los permisos de AppContainer
+# Trabajos.  Jobs
+Son objetos del kernel para manejar uno o más procesos.  
+Provee auditoria sobre esos procesos como tiempo de ejecución, memoria consumida... 
+Los procesos hijos creados dentro de un trabajo, automáticamente se asocian a ese trabajo, a menos que se marque la bandera CREATE_BREAKWAY_FROM_JOB en la creación y el trabajo lo permita.  
+Limites que se pueden ajustar en un trabajo:
+* Número máximo de procesos activos
+* Consumo de CPU
+    * Por trabajo y tiempo
+    * Por proceso y tiempo
+    * Windows 10 introdujo un ratio en el control de la CPU
+* Consumo de memoria
+* Consumo de ancho de banda de red
+* Control de manejadores, por ejemplo, no permitir a esos procesos que se comuniquen con procesos fuera del trabajo, acceso al portapapeles...  
+
+## Trabajos anidados
+En Windows 8 se introdujo el concepto de jerarquía de trabajos, siendo posible la anidación de trabajos.  
+Los trabajos hijo pueden ser más restrictivos que el trabajo padre pero no menos.  
+
+### API
+CreateJobObject, OpenjobObject: crea o abre un objeto de trabajo por su nombre.
+AssignProcessToJobObject: añade un proceso a un trabajo.  
+SetInformationJobObject: marcar información sobre un trabajo concreto.  
+QueryInformationJobObject: consultar información sobre el objeto trabajo.  
+TerminateJobObject: termina todos los procesos asociados a un objeto trabajo.
+
+# Silos
+Los silos en Windows, es la manera que encontró Microsoft de implementar contenedores en Windows.  
+Los silos son un tipo de trabajo que ofrece un aislamiento superior aun entre los procesos que están en su interior, 
+ofreciendo por ejemplo:
+* Un espacio de nombres privado.
+* Un sistema de ficheros virtualizado propio, realizando redirecciones.
+* Ids de procesos privados dentro del silo.
+* Virtualización del registro.  
+
+Los drivers se comparten entre todos los silos, de tal manera que la modificación de un driver afectaría a todos los silos.  
+![Imagen de arquitectura Silos](./images/silos.png?raw=true "Silos") 
+
+#Investigar
+LPC comunicación  
+COM object comunicación
+
