@@ -455,6 +455,61 @@ ofreciendo por ejemplo:
 Los drivers se comparten entre todos los silos, de tal manera que la modificación de un driver afectaría a todos los silos.  
 ![Imagen de arquitectura Silos](./images/silos.png?raw=true "Silos") 
 
+# Seguridad en Windows
+Winlogon es el proceso encargado de gestionar el login de los usuarios, además es quien gestiona el Ctrl+Alt+Del. Para mostrar la ventana de login, 
+winlogon usa el proceso LogonUI. El encargado de recibir la información de estos procesos es el Securoty Reference Monitor, que forma parte del kernel.  
+Lsass es el proceso encargado de la gestión de las credenciales, dispone de varios servicios:
+ * Active Directory, comunicación con Active Directory.
+ * NetLogon, comunicaciones seguras sobre la red.
+ * LSA Server, almacenar y gestionar la politica local de seguridad.
+ * SAM Server, almacena infromación sobre los usuarios locales y las politicas de seguridad relacionadas con usuarios y grupos.
+ * Msv1_0.dll, libreria para el login local o la comunicación con el controlador de dominio en versiones antiguas
+ * Kerberos.dll, comunicación con el controlador de dominio.
+ * Event Logder, encargado de la generación de logs.
+LSAISO es la nueva caracteristica para el almacenamiento de las credenciales con seguridad basada en virtualización.  
+![Imagen de security components](./images/security_components.png?raw=true "Security components") 
+
+## Secuencia de login
+1. Winlogon inicia LogonUI para conseguir la infromación del login usando un Credential Provider.
+    1. Winlogon crea un esritorio para la ventana de login al que únicamente System tiene acceso.  
+    2. Cuando se pulsa SAS (Secure Attention Sequence), winlogon lanza este escritorio.
+    3. El manejador del teclado deshabilita todos los hooks cuando detecta SAS.
+    4. El control sobre SAS es del proceso que lo creo, que siempre es winlogon.
+2. Winlogon envia esa información a Lsass.
+3. Lsass recibe la información.
+    1. Si es un login local o una versión antigua de Windows, utiliza MSVC1_0.
+    2. Se es un login contra un dominio, utiliza Kerberos.
+4. Analiza la respuesta.
+    1. Si no es satisfactorio, se le mostrará al usuario.
+    2. Si es satisfactorio, Lsass coge los privilegios de la cuenta de la base de datos de seguridad local o del Active Directory.
+5. Lsass crea un token para esa sesión que identifica el contexto de seguridad del usuario.
+6. Winlogon asocia este token al primer proceso de la sesión, todos los procesos siguientes copiaran este token. Normalmente este proceso es userinit.exe que es el encargado de lanzar otros procesos como Explorer.exe.  
+![Imagen de logon sequence](./images/logon_sequence.png?raw=true "Logon sequence") 
+
+## SAM Database
+Esta base de datos forma parte del registro de Windows. HKLM\SAM\SAM.  
+Únicamente el usuario System puede acceder al contenido. Aunque podemos añadir permisos si somos administradores, no es recomendable.  
+Podemos lanzar el editor del registro con PsExec de Sysinternals.  
+````bash
+C:\Tools\Sysinternals>PsExec.exe -s -i regedit
+````
+* -s, para lanzar el proceso con permisos de system
+* -i, al ser un proceso de system, se ejecuta por defecto en la sesión 0, el -i es para que se ejecute en la sesión 1 de manera interactiva.  
+
+Esto nos abrirá un editor del registro en el que se podrá ver el contenido de SAM.
+
+## Credential Provider
+En las versiones antiguas de Windwos (anterior a Vista) el proceso encargado del login y de mostarr la interfaz genraba multitud de errores que provocaban caidas del sistema.  
+LogonUI.exe es el encargado de gestioanr la ventana del login, si un método de login genera una excepción, LogonUI termina y automaticamente crea otro proceso de LogonUI.  
+Permite la creación de proveedores de servicios de login por terceros.  
+LogonUI carga del registro los proveedores de login como:
+* authui.dll, Microsoft provides Interactive
+* Smart-cardcredentialprovider.dll, Smartcard
+* FaceCredentialProvider.dll, Windows Hello
+
+
+
+
 #Investigar
 LPC comunicación  
 COM object comunicación
