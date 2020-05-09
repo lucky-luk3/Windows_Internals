@@ -183,7 +183,8 @@ Si el equipo es multiprocesador el algoritmo cambia.
 ![Imagen de thread scheduling multi-cpu](./images/scheduling-mulicpu.png?raw=true "scheduling")
 #### Quantum
 Es la medida de tiempo que el procesador tiene en cuenta para cambiar de hilo, aunque no haya terminado la ejecución.  
-El planificador tiene ticks cada 10 msec o 15 en el caso de los multiprocesadores. El tiempo de quantum en clientes de 2 ticks y en los servidores de 12 ticks.  
+El planificador tiene ticks cada 10 msec o 15 en el caso de los multiprocesadores.  
+El tiempo de quantum en clientes de 2 ticks y en los servidores de 12 ticks.  
 Se puede ver utilizando la herramienta clockres.exe.  
 Se puede modificar cambiando la clave de registro: *HKLM\SYSTEM\CCS\Control\PriorityControl:Win32PrioritySepaaration*  
 Es de 30 msec en clientes y 180 msec en servidores.  
@@ -297,34 +298,31 @@ Los Enviroment Subsystem pueden ser win32, unix... en el caso de win 32, la dll 
 Los servicios son procesos que arrancan cuando se carga el subsistema y corren bajo local system, network service  local service.  
 Dentro de procesos del sistema está por ejemplo csrss.exe, SCM (service control manager), smss.exe, si estos procesos se corrompen producen un error fatal en el sistema.
 
-## Arquitectura en Windows 10
-La arquitectura en Windows 10, ha tenido varios cambios.
-![Imagen de arquitectura](./images/architecture-win10.PNG?raw=true "Arquitectura")
 
 ## Seguridad Basada en Virtualización (Virtualization Based Security)(Win10 Enterprise-WS2016)
-Está característica no está disponible en todas las versiones de Win10.
-Se basa en la creación de dos niveles de virtualización en el sistema, uno confiable y otro no.
-El VTL0 (Virtual Trust Level) es el que tiene privilegios "normales".
-El VTL1 es el nivel de confianza para el sistema.
-Ambos niveles disponen de un Modo Kernel y un Modo Usuario. ¿Sesión 0 y 1?. 
-Lo que diferencia el VTL 1 es que es capaz de acceder a todo lo que hay en VTL 0 pero no al revés.
-Por debajo de ambos, tenemos al Hyper-V que es quién gestiona todos los permisos.
-Esto permite que incluso un driver en VTL 0 no pueda acceder al kernel de VTL 1.
-Para que esta tecnología pueda funcionar, se añadió la tecnología de Traducción de Direcciones de Segundo Nivel (SLAT), esto permite que el kernel en VTL 1 pueda crear direcciones intermedias que hacen que desde VTL 0 sea imposible acceder a direcciones en VTL 1.
-Otra tecnología que se implementó es I/O MMU (I/O Memory Management Unit), esto le permite al Hipervisor o al kernel de VTL 1, ocultar cosas en el espacio I/O. 
+Está característica no está disponible en todas las versiones de Win10.  
+Se basa en la creación de dos niveles de virtualización en el sistema, uno confiable y otro no.  
+El VTL0 (Virtual Trust Level) es el que tiene privilegios "normales".  
+El VTL1 es el nivel de confianza para el sistema.  
+Ambos niveles disponen de un Modo Kernel y un Modo Usuario. ¿Sesión 0 y 1?.  
+Lo que diferencia el VTL 1 es que es capaz de acceder a todo lo que hay en VTL 0 pero no al revés.  
+Por debajo de ambos, tenemos al Hyper-V que es quién gestiona todos los permisos.  
+Esto permite que incluso un driver en VTL 0 no pueda acceder al kernel de VTL 1.  
+Para que esta tecnología pueda funcionar, se añadió la tecnología de Traducción de Direcciones de Segundo Nivel (SLAT), esto permite que el kernel en VTL 1 pueda crear direcciones intermedias que hacen que desde VTL 0 sea imposible acceder a direcciones en VTL 1.  
+Otra tecnología que se implementó es I/O MMU (I/O Memory Management Unit), esto le permite al Hipervisor o al kernel de VTL 1, ocultar cosas en el espacio I/O.  
 
 ![Imagen de arquitectura Wow64](./images/VBS.PNG?raw=true "VBS")
 
 ### Credential Guard
-Una de las características que dependen de VBS es Credential Guard. Esta característica permite almacenar las credenciales en el proceso "Lsaiso.exe" en vez del típico (Lsass.exe).
-Lsaiso.exe está en VTL 1, de esta manera, incluso un proceso con privilegios de system en VTL 0, no podrá acceder al espacio de memoria de Lsaiso.exe.
+Una de las características que dependen de VBS es Credential Guard. Esta característica permite almacenar las credenciales en el proceso "Lsaiso.exe" en vez del típico (Lsass.exe).  
+Lsaiso.exe está en VTL 1, de esta manera, incluso un proceso con privilegios de system en VTL 0, no podrá acceder al espacio de memoria de Lsaiso.exe.  
 
 ### Device Guard
-Esta característica, permite únicamente ejecutar aplicaciones confiables en el sistema.
-Este control se hace a nivel de Hypervisor de tal manera que bypassearlo es muy complejo.
+Esta característica, permite únicamente ejecutar aplicaciones confiables en el sistema.  
+Este control se hace a nivel de Hypervisor de tal manera que bypassearlo es muy complejo.  
 
 ### Secure Driver Framework (SDF)
-Es un framework que ha autorizado Microsoft para el desarrollo de driver en VTL 1.
+Es un framework que ha autorizado Microsoft para el desarrollo de driver en VTL 1.  
 
 ## Procesos UWP (Universal Windows Platform)
 Son las llamadas aplicaciones metro, strore, moder...  
