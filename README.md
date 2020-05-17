@@ -312,6 +312,9 @@ Para que esta tecnología pueda funcionar, se añadió la tecnología de Traducc
 Otra tecnología que se implementó es I/O MMU (I/O Memory Management Unit), esto le permite al Hipervisor o al kernel de VTL 1, ocultar cosas en el espacio I/O.  
 
 ![Imagen de arquitectura Wow64](./images/VBS.PNG?raw=true "VBS")
+### SLAT (Second Level Address Translation)
+Normalmente, la dirección virtual de una página de memoria es traducida por la cpu a una dirección física de memoria. 
+En este caso el hipervisor realiza una segunda translación de las direcciones si se tienen permisos para acceder a ella.  
 
 ### Credential Guard
 Una de las características que dependen de VBS es Credential Guard. Esta característica permite almacenar las credenciales en el proceso "Lsaiso.exe" en vez del típico (Lsass.exe).  
@@ -486,6 +489,49 @@ LSAISO es la nueva caracteristica para el almacenamiento de las credenciales con
 6. Winlogon asocia este token al primer proceso de la sesión, todos los procesos siguientes copiaran este token. Normalmente este proceso es userinit.exe que es el encargado de lanzar otros procesos como Explorer.exe.  
 ![Imagen de logon sequence](./images/logon_sequence.png?raw=true "Logon sequence") 
 
+## Identificador de seguridad (SID)
+Identificador único que dentifica a un actor que puede realizar acciones (usuarios, grupos, equipos, dominios, ...)  
+Hay ciertos SID que son siempre los mismos en todos los equipos:
+![Imagen de sid conocidos](./images/wellknown_sid.png?raw=true "SIDs conocidos") 
+Estos son los más comunes, la lista completa son unos 50.  
+Hay una función "IsWellKnownSid" para poder indentificarlos.  
+
+## Access Token
+También llamado unicamente token.  
+Es un objeto de kernel que identifica el contexto de seguridad de un proceso o un hilo.  
+Cuando pertenecea un proceso, se le llama Primary Token y los hilos de ese proceso lo heredarán pero un hilo también puede impersonal el token de otro usuario, función CreateProcessAsUser.  
+Este token descrive los privilegios, cuentas y grupos asociados a ese proceso o hilo.  
+
+
+## Descriptor de seguridad
+El descriptor de seguridad identifica quién puede hacer que en un objeto concreto.   
+El descriptor de seguridad en añadido a un objeto cuando es creado.  
+Cuando alguien pide acceso a un objeto, el sistema de seguridad comprueba si ese usuario tiene acceso para lo que está solicitando mediante el token de seguridad de ese usuario y el descriptor de seguridad.  
+Partes:
+* Dueño del objeto.
+* DACL (Discretionary Access Control List), la parte más importante. Quién puede hacer qué con el objeto.
+    * ACE - Reglas atómicas de acceso. Permiten o deniegan qué a quién, se ejecutan en orden, si se cumple una condición no se ejecutan las otras.  
+* SACL (System Access Control List), indica que operaciones de que usuarios deben de ser auditadas en los logs.
+
+Las ACLs contienen ACEs (Access Control Entries), cada una contiene un SID y una máscara de acceso.
+![Imagen de security descriptor](./images/security-descriptor.png?raw=true "Security Descriptor") 
+## Privilegios
+Es el derecho de un ibjeto para realizar ciertas acciones del sistema.  
+Se peuden modificar desde la Directiva de seguridad Local (Local Security Policy).  
+Por defecto lo privilegios están desactivados, un proceso puede activar sus privilegios y luego usarlos pero no puede añadise privilegios.  
+Privilegios importantes:
+* Debug process, te permite acceder a otros procesos.  
+* Take ownership, hacerte dueño de otro objeto, incluso aunque no tengas privilegios de acceso, puedes hacerte dueño del objeto y luego cambiar los privilegios.  
+* Changing system time.
+* Load or unload device drivers, cargar driver en el sistema.
+* SeTcbPrivilege, Actuar como parte del sistema operativo, por defecto nadie tiene ese privilegio, permite impersonar cualquier usuario.     
+* SeCreateTokenPrivilege, Crear un objeto de token, por defecto nadie tiene ese privilegio, permite crear tokens sin necesidad de que lsass lo haga, lsass tiene ese privilegio.
+
+Privilegios básicos:
+* SeChangeNotifyPrivilege, poder acceder a objetos para los que tenemos acceso pero no tenemos acceso para su ibjeto padre. (pe. carpetas)
+
+
+
 ## SAM Database
 Esta base de datos forma parte del registro de Windows. HKLM\SAM\SAM.  
 Únicamente el usuario System puede acceder al contenido. Aunque podemos añadir permisos si somos administradores, no es recomendable.  
@@ -507,6 +553,10 @@ LogonUI carga del registro los proveedores de login como:
 * Smart-cardcredentialprovider.dll, Smartcard
 * FaceCredentialProvider.dll, Windows Hello
 
+## UAC User Access Control
+Un usuario, incluso aunque sea administrador, crea procesos con integridad media.  
+Cuando un usurio o una aplicación necesita realizar acciones con permisos elevados, es mostrado al usuario un dialogo que deberá aceptar.  
+Es posible configurar diferenets niveles para el UAC, desde No notificar nunca a Notificar siemrpe.  
 
 
 
