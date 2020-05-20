@@ -460,21 +460,22 @@ Los drivers se comparten entre todos los silos, de tal manera que la modificaci�
 
 # Seguridad en Windows
 Winlogon es el proceso encargado de gestionar el login de los usuarios, además es quien gestiona el Ctrl+Alt+Del. Para mostrar la ventana de login, 
-winlogon usa el proceso LogonUI. El encargado de recibir la información de estos procesos es el Securoty Reference Monitor, que forma parte del kernel.  
+winlogon usa el proceso LogonUI.  
+El encargado de recibir la información de estos procesos es el Securoty Reference Monitor, que forma parte del kernel.  
 Lsass es el proceso encargado de la gestión de las credenciales, dispone de varios servicios:
  * Active Directory, comunicación con Active Directory.
  * NetLogon, comunicaciones seguras sobre la red.
- * LSA Server, almacenar y gestionar la politica local de seguridad.
- * SAM Server, almacena infromación sobre los usuarios locales y las politicas de seguridad relacionadas con usuarios y grupos.
- * Msv1_0.dll, libreria para el login local o la comunicación con el controlador de dominio en versiones antiguas
+ * LSA Server, almacenar y gestionar la política local de seguridad.
+ * SAM Server, almacena información sobre los usuarios locales y las políticas de seguridad relacionadas con usuarios y grupos.
+ * Msv1_0.dll, librería para el login local o la comunicación con el controlador de dominio en versiones antiguas
  * Kerberos.dll, comunicación con el controlador de dominio.
  * Event Logder, encargado de la generación de logs.
 LSAISO es la nueva caracteristica para el almacenamiento de las credenciales con seguridad basada en virtualización.  
 ![Imagen de security components](./images/security_components.png?raw=true "Security components") 
 
 ## Secuencia de login
-1. Winlogon inicia LogonUI para conseguir la infromación del login usando un Credential Provider.
-    1. Winlogon crea un esritorio para la ventana de login al que únicamente System tiene acceso.  
+1. Winlogon inicia LogonUI para conseguir la información del login usando un Credential Provider.
+    1. Winlogon crea un escritorio para la ventana de login al que únicamente System tiene acceso.  
     2. Cuando se pulsa SAS (Secure Attention Sequence), winlogon lanza este escritorio.
     3. El manejador del teclado deshabilita todos los hooks cuando detecta SAS.
     4. El control sobre SAS es del proceso que lo creo, que siempre es winlogon.
@@ -490,17 +491,17 @@ LSAISO es la nueva caracteristica para el almacenamiento de las credenciales con
 ![Imagen de logon sequence](./images/logon_sequence.png?raw=true "Logon sequence") 
 
 ## Identificador de seguridad (SID)
-Identificador único que dentifica a un actor que puede realizar acciones (usuarios, grupos, equipos, dominios, ...)  
-Hay ciertos SID que son siempre los mismos en todos los equipos:
+Identificador único que identifica a un actor que puede realizar acciones (usuarios, grupos, equipos, dominios, ...)  
+Hay ciertos SID que son siempre los mismos en todos los equipos:  
 ![Imagen de sid conocidos](./images/wellknown_sid.png?raw=true "SIDs conocidos") 
 Estos son los más comunes, la lista completa son unos 50.  
-Hay una función "IsWellKnownSid" para poder indentificarlos.  
+Hay una función "IsWellKnownSid" para poder identificarlos.  
 
 ## Access Token
-También llamado unicamente token.  
+También llamado únicamente token.  
 Es un objeto de kernel que identifica el contexto de seguridad de un proceso o un hilo.  
-Cuando pertenecea un proceso, se le llama Primary Token y los hilos de ese proceso lo heredarán pero un hilo también puede impersonal el token de otro usuario, función CreateProcessAsUser.  
-Este token descrive los privilegios, cuentas y grupos asociados a ese proceso o hilo.  
+Cuando pertenece a un proceso, se le llama Primary Token y los hilos de ese proceso lo heredarán pero un hilo también puede impersonal el token de otro usuario, función CreateProcessAsUser.  
+Este token describe los privilegios, cuentas y grupos asociados a ese proceso o hilo.  
 
 
 ## Descriptor de seguridad
@@ -513,12 +514,12 @@ Partes:
     * ACE - Reglas atómicas de acceso. Permiten o deniegan qué a quién, se ejecutan en orden, si se cumple una condición no se ejecutan las otras.  
 * SACL (System Access Control List), indica que operaciones de que usuarios deben de ser auditadas en los logs.
 
-Las ACLs contienen ACEs (Access Control Entries), cada una contiene un SID y una máscara de acceso.
+Las ACLs contienen ACEs (Access Control Entries), cada una contiene un SID y una máscara de acceso.  
 ![Imagen de security descriptor](./images/security-descriptor.png?raw=true "Security Descriptor") 
 ## Privilegios
-Es el derecho de un ibjeto para realizar ciertas acciones del sistema.  
-Se peuden modificar desde la Directiva de seguridad Local (Local Security Policy).  
-Por defecto lo privilegios están desactivados, un proceso puede activar sus privilegios y luego usarlos pero no puede añadise privilegios.  
+Es el derecho de un objeto para realizar ciertas acciones del sistema.  
+Se pueden modificar desde la Directiva de seguridad Local (Local Security Policy).  
+Por defecto lo privilegios están desactivados, un proceso puede activar sus privilegios y luego usarlos pero no puede añadirse privilegios.  
 Privilegios importantes:
 * Debug process, te permite acceder a otros procesos.  
 * Take ownership, hacerte dueño de otro objeto, incluso aunque no tengas privilegios de acceso, puedes hacerte dueño del objeto y luego cambiar los privilegios.  
@@ -528,7 +529,7 @@ Privilegios importantes:
 * SeCreateTokenPrivilege, Crear un objeto de token, por defecto nadie tiene ese privilegio, permite crear tokens sin necesidad de que lsass lo haga, lsass tiene ese privilegio.
 
 Privilegios básicos:
-* SeChangeNotifyPrivilege, poder acceder a objetos para los que tenemos acceso pero no tenemos acceso para su ibjeto padre. (pe. carpetas)
+* SeChangeNotifyPrivilege, poder acceder a objetos para los que tenemos acceso pero no tenemos acceso para su objeto padre. (pe. carpetas)
 
 
 
@@ -545,8 +546,8 @@ C:\Tools\Sysinternals>PsExec.exe -s -i regedit
 Esto nos abrirá un editor del registro en el que se podrá ver el contenido de SAM.
 
 ## Credential Provider
-En las versiones antiguas de Windwos (anterior a Vista) el proceso encargado del login y de mostarr la interfaz genraba multitud de errores que provocaban caidas del sistema.  
-LogonUI.exe es el encargado de gestioanr la ventana del login, si un método de login genera una excepción, LogonUI termina y automaticamente crea otro proceso de LogonUI.  
+En las versiones antiguas de Windows (anterior a Vista) el proceso encargado del login y de mostrar la interfaz generaba multitud de errores que provocaban caídas del sistema.  
+LogonUI.exe es el encargado de gestionar la ventana del login, si un método de login genera una excepción, LogonUI termina y automáticamente crea otro proceso de LogonUI.  
 Permite la creación de proveedores de servicios de login por terceros.  
 LogonUI carga del registro los proveedores de login como:
 * authui.dll, Microsoft provides Interactive
@@ -555,9 +556,47 @@ LogonUI carga del registro los proveedores de login como:
 
 ## UAC User Access Control
 Un usuario, incluso aunque sea administrador, crea procesos con integridad media.  
-Cuando un usurio o una aplicación necesita realizar acciones con permisos elevados, es mostrado al usuario un dialogo que deberá aceptar.  
-Es posible configurar diferenets niveles para el UAC, desde No notificar nunca a Notificar siemrpe.  
+Cuando un usuario o una aplicación necesita realizar acciones con permisos elevados, es mostrado al usuario un dialogo que deberá aceptar.  
+Es posible configurar diferentes niveles para el UAC, desde No notificar nunca a Notificar siempre.  
 
+## Elevación
+Cuando un usuario administrador se loga en el sistema, se crean dos tokens, uno con los privilegios de administrador y otro con los privilegios básicos.  
+Cuando un proceso necesita ser ejecutado con permisos elevados:
+* Si el usuario es administrador se mostrará el UAC. (Consent Elevation)
+* Si el usuario no es administrador, necesitará introducir las credenciales de un administrador (Over The Shoulder eleavation)
+
+No es posible que un proceso cambie su integridad, solo es posible crear otro proceso con integridad diferente.  
+Cuando se quiere ejecutar con permisos elevados:
+* Botón secundario y Ejecutar como Administrador.
+* Usando la API ShellExecuteEx mediante el comando "runas".
+* Añadir en el manifest de la aplicación que necesita privilegios elevados. Si no lo especifica en el manifest no podrá ejecutar elevado. 
+    * /level = asinvoker, se ejecutará con los privilegios del usuario.
+    * /level = highestAvailable, si el usuario es administrador, se le solicitara ejecutarlo con permisos elevados, si no lo es, se ejecutará con los permisos del usuario.
+    * /level = requireAdministrator, sólo podrá ser ejecutada por un usuario administrador
+
+Colores del UAC:
+* Azul para Microsoft o Certificados marcados como confianza.
+* Naranja cuando no está firmada la aplicación o lo está con un certificado desconocido.
+
+### Proceso de elevación
+Cuando un proceso de integridad media, por ejemplo Explorer, quiere ejecutar un proceso con privilegios elevados, ese proceso realiza una llamada al servicio AppInfo.  
+AppInfo llamará a Consent.exe que corre bajo Local Sytem el que creará el UAC.  
+Cuando el usuario ha aceptado, será el servicio APPInfo el que hará CreateProcessAsUser de la aplicación.  
+Aunque la aplicación la ha lanzado AppInfo, será Explorer el que aparecerá como Parent del proceso creado ya que se realiza un cambio en el padre del proceso.    
+![Imagen de Elevación](./images/create_process_elevate.png?raw=true "Creación de proceso elevado")
+
+### Niveles de integridad
+Los niveles de integridad se implementaron para que un usuario pueda ejecutar procesos con diferentes niveles de privilegios.  
+Es representado con un SID llamado Mandatory Integrity Control en el access token del proceso.  
+Los procesos no tienen acceso a la memoria de procesos con una integridad mayor.  
+Niveles:
+* System
+* High (administrador)
+* Medium (por defecto)
+* Low (AppContainer, no tiene acceso al sistema de ficheros por ejemplo)
+#### User Interface Privilege Isolation (UIPI)
+Característica introducida que limita que un proceso pueda enviar un mensaje a una ventana creada por un proceso de integridad mayor excepto algunos.
+Existe un ataque en el que procesos de privilegios bajos podrían bombardear a una ventana de privilegios elevados con el fin de que no reciba los mensajes legítimos.  
 
 
 #Investigar
